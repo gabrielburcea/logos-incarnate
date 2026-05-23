@@ -117,6 +117,7 @@ export function GenesisExperience({ surface }: { surface: SurfaceMode }) {
   const activeAnnotation = annotations[selectedVerse] ?? {};
   const noteDraft = noteDrafts[selectedVerse] ?? (activeAnnotation.note ?? "");
   const noteColorDraft = noteColorDrafts[selectedVerse] ?? (activeAnnotation.noteColor ?? DEFAULT_NOTE_COLOR);
+  const selectedVerseText = genesis2Chapter.verses.find((verse) => verse.number === selectedVerse)?.text ?? "";
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -298,7 +299,7 @@ export function GenesisExperience({ surface }: { surface: SurfaceMode }) {
         ) : null}
       </header>
 
-      <nav className="mode-links" aria-label="Switch Genesis 2 surface">
+      <nav className={`mode-links ${isStudy ? "is-study" : ""}`} aria-label="Switch Genesis 2 surface">
         <div className="segmented-control">
           <Link href="/genesis-2/reading" className={!isStudy ? "is-active" : ""}>
             Reading mode
@@ -309,95 +310,14 @@ export function GenesisExperience({ surface }: { surface: SurfaceMode }) {
         </div>
       </nav>
 
-      {isStudy ? (
-        <section className="study-workbench" aria-labelledby="study-workbench-heading">
-          <div>
-            <p className="eyebrow">Study manuscript tools</p>
-            <h2 id="study-workbench-heading">Verse {selectedVerse}</h2>
-            <p>Underline words or phrases, then save handwritten-style margin notes for the selected verse.</p>
-          </div>
-
-          <div className="annotation-actions annotation-actions--helper">
-            <span>Underlining mode</span>
-            <button
-              type="button"
-              className={underlineMode === "word" ? "is-active" : ""}
-              onClick={() => {
-                setUnderlineMode("word");
-                setPhraseStartWordIndex(null);
-              }}
-            >
-              Word
-            </button>
-            <button
-              type="button"
-              className={underlineMode === "phrase" ? "is-active" : ""}
-              onClick={() => setUnderlineMode("phrase")}
-            >
-              Phrase
-            </button>
-            <small>
-              {underlineMode === "phrase"
-                ? phraseStartWordIndex === null
-                  ? "Click a start word, then an end word."
-                  : "Now click the end word to underline the phrase."
-                : "Click a word to underline or remove underline."}
-            </small>
-          </div>
-
-          <label className="note-field">
-            <span>Margin note</span>
-            <textarea
-              rows={4}
-              value={noteDraft}
-              onChange={(event) =>
-                setNoteDrafts((current) => ({
-                  ...current,
-                  [selectedVerse]: event.target.value,
-                }))
-              }
-              placeholder="Write a handwritten-style note for this verse."
-            />
-          </label>
-
-          <div className="color-picker" role="group" aria-label="Choose note color">
-            <span>Note color</span>
-            <div className="color-picker__swatches">
-              {NOTE_COLORS.map((color) => (
-                <button
-                  key={color}
-                  type="button"
-                  className={noteColorDraft === color ? "is-active" : ""}
-                  onClick={() =>
-                    setNoteColorDrafts((current) => ({
-                      ...current,
-                      [selectedVerse]: color,
-                    }))
-                  }
-                  style={{ backgroundColor: color }}
-                  aria-label={`Use ${color} for saved notes`}
-                />
-              ))}
-            </div>
-          </div>
-
-          <div className="annotation-actions">
-            <button type="button" className="is-active" onClick={saveMarginNote}>
-              Save note
-            </button>
-            <button type="button" onClick={clearMarginNote}>
-              Clear note
-            </button>
-          </div>
-        </section>
-      ) : null}
-
-      <div className={`experience-layout ${isStudy ? "study-layout manuscript-layout is-reading-only" : "reading-layout is-reading-only"}`}>
-        <section className="reading-column" aria-labelledby="chapter-text-heading">
+      <div className={`experience-layout ${isStudy ? "study-layout" : "reading-layout is-reading-only"}`}>
+        <section className="reading-column" aria-label="Chapter text">
           {isStudy ? (
             <div className="reading-column__header">
-              <h2 id="chapter-text-heading">Chapter text</h2>
-              <p>Select a verse, underline words or phrases, and open focus cards directly from the manuscript text.</p>
+              <p>
+                Studying verse {selectedVerse}. Keep reading in the manuscript and use the inspector to mark notes and
+                meaning.
+              </p>
             </div>
           ) : null}
 
@@ -471,22 +391,100 @@ export function GenesisExperience({ surface }: { surface: SurfaceMode }) {
                       ))}
                     </div>
                   ) : null}
-
-                  {isStudy &&
-                  isSelected &&
-                  verse.focusTargetIds?.includes(selectedMeaning) ? (
-                    <div className="focus-card-container">
-                      <MeaningExplorer
-                        target={meaningTargetMap[selectedMeaning]}
-                        headingId={`meaning-card-${verse.number}-${selectedMeaning}`}
-                      />
-                    </div>
-                  ) : null}
                 </article>
               );
             })}
           </div>
         </section>
+
+        {isStudy ? (
+          <aside className="inspector-column">
+            <section className="annotation-panel" aria-labelledby="annotation-panel-heading">
+              <div>
+                <p className="eyebrow">Study manuscript tools</p>
+                <h2 id="annotation-panel-heading">Verse {selectedVerse}</h2>
+                <p>Underline words or phrases, then save handwritten-style margin notes for the selected verse.</p>
+              </div>
+
+              <blockquote className="selected-verse-context">{selectedVerseText}</blockquote>
+
+              <div className="annotation-actions annotation-actions--helper">
+                <span>Underlining mode</span>
+                <button
+                  type="button"
+                  className={underlineMode === "word" ? "is-active" : ""}
+                  onClick={() => {
+                    setUnderlineMode("word");
+                    setPhraseStartWordIndex(null);
+                  }}
+                >
+                  Word
+                </button>
+                <button
+                  type="button"
+                  className={underlineMode === "phrase" ? "is-active" : ""}
+                  onClick={() => setUnderlineMode("phrase")}
+                >
+                  Phrase
+                </button>
+                <small>
+                  {underlineMode === "phrase"
+                    ? phraseStartWordIndex === null
+                      ? "Click a start word, then an end word."
+                      : "Now click the end word to underline the phrase."
+                    : "Click a word to underline or remove underline."}
+                </small>
+              </div>
+
+              <label className="note-field">
+                <span>Margin note</span>
+                <textarea
+                  rows={4}
+                  value={noteDraft}
+                  onChange={(event) =>
+                    setNoteDrafts((current) => ({
+                      ...current,
+                      [selectedVerse]: event.target.value,
+                    }))
+                  }
+                  placeholder="Write a handwritten-style note for this verse."
+                />
+              </label>
+
+              <div className="color-picker" role="group" aria-label="Choose note color">
+                <span>Note color</span>
+                <div className="color-picker__swatches">
+                  {NOTE_COLORS.map((color) => (
+                    <button
+                      key={color}
+                      type="button"
+                      className={noteColorDraft === color ? "is-active" : ""}
+                      onClick={() =>
+                        setNoteColorDrafts((current) => ({
+                          ...current,
+                          [selectedVerse]: color,
+                        }))
+                      }
+                      style={{ backgroundColor: color }}
+                      aria-label={`Use ${color} for saved notes`}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              <div className="annotation-actions">
+                <button type="button" className="is-active" onClick={saveMarginNote}>
+                  Save note
+                </button>
+                <button type="button" onClick={clearMarginNote}>
+                  Clear note
+                </button>
+              </div>
+            </section>
+
+            <MeaningExplorer target={meaningTargetMap[selectedMeaning]} />
+          </aside>
+        ) : null}
       </div>
     </main>
   );
