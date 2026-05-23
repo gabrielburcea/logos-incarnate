@@ -10,7 +10,6 @@ import {
 import { MeaningExplorer } from "@/components/meaning-explorer";
 
 type SurfaceMode = "reading" | "study";
-
 type ToolMode = "pen" | "marker";
 
 type ColoredPhraseRange = {
@@ -187,17 +186,6 @@ export function GenesisExperience({ surface }: { surface: SurfaceMode }) {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(annotations));
   }, [annotations, hasLoadedAnnotations]);
 
-  const totalAnnotations = useMemo(
-    () =>
-      Object.values(annotations).filter((annotation) => {
-        const hasUnderline = Boolean(annotation.underlinedWordIndexes?.length);
-        const hasPhraseUnderline = Boolean(annotation.underlinedPhraseRanges?.length);
-        const hasNote = Boolean(annotation.note?.trim());
-        return hasUnderline || hasPhraseUnderline || hasNote;
-      }).length,
-    [annotations],
-  );
-
   function updateAnnotation(next: VerseAnnotation) {
     setAnnotations((current) => ({
       ...current,
@@ -317,16 +305,19 @@ export function GenesisExperience({ surface }: { surface: SurfaceMode }) {
           const underlineColorValue = getUnderlineColor(annotation, index);
           const appliedTool = getWordTool(annotation, index);
 
+          const wordClassName = [
+            "verse-word",
+            isUnderlined && appliedTool === "pen" ? "is-underlined" : "",
+            isUnderlined && appliedTool === "marker" ? "is-marker-underlined" : "",
+          ]
+            .filter(Boolean)
+            .join(" ");
+
           if (!canUnderlineWords) {
             return (
               <Fragment key={`${verseNumber}-word-${index}`}>
                 <span
-                  className={[
-                    isUnderlined ? "verse-word is-underlined" : "verse-word",
-                    isUnderlined && appliedTool === "marker" ? "is-marker-underlined" : "",
-                  ]
-                    .filter(Boolean)
-                    .join(" ")}
+                  className={wordClassName}
                   style={isUnderlined ? { ["--underline-color" as string]: underlineColorValue } : undefined}
                 >
                   {word}
@@ -340,11 +331,7 @@ export function GenesisExperience({ surface }: { surface: SurfaceMode }) {
             <Fragment key={`${verseNumber}-word-${index}`}>
               <button
                 type="button"
-                className={[
-                  isUnderlined ? "verse-word is-underlined is-word-button" : "verse-word is-word-button",
-                  isUnderlined && appliedTool === "marker" ? "is-marker-underlined" : "",
-                  isPenMode ? "is-pen-active" : "",
-                ]
+                className={[wordClassName, "is-word-button", isPenMode ? "is-pen-active" : ""]
                   .filter(Boolean)
                   .join(" ")}
                 onClick={(event) => {
@@ -373,13 +360,6 @@ export function GenesisExperience({ surface }: { surface: SurfaceMode }) {
           </Link>
           <h1>{genesis2Chapter.title}</h1>
         </div>
-        {!isStudy ? (
-          <div className="chapter-meta">
-            <span>{genesis2Chapter.translation}</span>
-            <span>{genesis2Chapter.verses.length} verses</span>
-            <span>{totalAnnotations} marked verses</span>
-          </div>
-        ) : null}
       </header>
 
       <nav className={`mode-links ${isStudy ? "is-study" : ""}`} aria-label="Switch Genesis 2 surface">
@@ -473,7 +453,7 @@ export function GenesisExperience({ surface }: { surface: SurfaceMode }) {
 
         {isStudy ? (
           <aside className="inspector-column">
-            <section className="annotation-panel" aria-labelledby="annotation-panel-heading">
+            <section className="annotation-panel">
               <div className="annotation-toolbar">
                 <button
                   type="button"
@@ -499,8 +479,8 @@ export function GenesisExperience({ surface }: { surface: SurfaceMode }) {
                 </button>
               </div>
 
-              <div className="color-picker" role="group" aria-label="Choose underline color">
-                <span>Pen color</span>
+              <div className="color-picker" role="group" aria-label="Choose annotation color">
+                <span>Color</span>
                 <div className="color-picker__swatches color-picker__swatches--bright">
                   {UNDERLINE_COLORS.map((color) => (
                     <button
@@ -509,7 +489,7 @@ export function GenesisExperience({ surface }: { surface: SurfaceMode }) {
                       className={underlineColor === color ? "is-active" : ""}
                       onClick={() => setUnderlineColor(color)}
                       style={{ backgroundColor: color }}
-                      aria-label={`Use ${color} for pen`}
+                      aria-label={`Use ${color}`}
                     />
                   ))}
                 </div>
@@ -556,7 +536,7 @@ export function GenesisExperience({ surface }: { surface: SurfaceMode }) {
                   Save note
                 </button>
                 <button type="button" onClick={() => setIsPenMode((current) => !current)}>
-                  {isPenMode ? "Pen off" : "Pen on"}
+                  {isPenMode ? "Tool off" : "Tool on"}
                 </button>
                 <button type="button" onClick={clearMarginNote}>
                   Clear note
