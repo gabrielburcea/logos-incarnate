@@ -352,6 +352,14 @@ button {
   cursor: pointer;
 }
 
+.study .verse-button--interactive,
+.study .verse-text,
+.study .verse-word,
+.study .verse-word.is-word-button {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
 .verse-static {
   display: grid;
   grid-template-columns: auto 1fr;
