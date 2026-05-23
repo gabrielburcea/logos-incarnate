@@ -35,6 +35,8 @@ const UNDERLINE_COLORS = [
   "#111111",
   "#6f4e37",
 ];
+const MAIN_UNDERLINE_COLORS = UNDERLINE_COLORS.slice(0, 5);
+const EXTRA_UNDERLINE_COLORS = UNDERLINE_COLORS.slice(5);
 
 function toSafeToolMode(raw: unknown): ToolMode {
   return raw === "marker" ? "marker" : "pen";
@@ -70,9 +72,9 @@ function toSafeAnnotationState(raw: unknown): AnnotationState {
       const underlinedWordTools =
         value.underlinedWordTools && typeof value.underlinedWordTools === "object"
           ? Object.fromEntries(
-              Object.entries(value.underlinedWordTools).filter(
-                ([wordIndex, tool]) => !Number.isNaN(Number(wordIndex)) && (tool === "pen" || tool === "marker"),
-              ),
+              Object.entries(value.underlinedWordTools)
+                .filter(([wordIndex]) => !Number.isNaN(Number(wordIndex)))
+                .map(([wordIndex, tool]) => [wordIndex, toSafeToolMode(tool)]),
             )
           : {};
 
@@ -109,7 +111,6 @@ export function GenesisExperience({ surface }: { surface: SurfaceMode }) {
   const [selectedMeaning, setSelectedMeaning] = useState<MeaningTargetId>("helper");
   const [annotations, setAnnotations] = useState<AnnotationState>({});
   const [hasLoadedAnnotations, setHasLoadedAnnotations] = useState(false);
-  const [isPenMode, setIsPenMode] = useState(false);
   const [toolMode, setToolMode] = useState<ToolMode>(DEFAULT_TOOL_MODE);
   const [underlineColor, setUnderlineColor] = useState<string>(DEFAULT_UNDERLINE_COLOR);
 
@@ -173,11 +174,6 @@ export function GenesisExperience({ surface }: { surface: SurfaceMode }) {
 
   function handleWordInteraction(verseNumber: number, wordIndex: number) {
     selectVerse(verseNumber);
-
-    if (!isPenMode) {
-      return;
-    }
-
     toggleWordUnderline(verseNumber, wordIndex);
   }
 
@@ -228,9 +224,7 @@ export function GenesisExperience({ surface }: { surface: SurfaceMode }) {
             <Fragment key={`${verseNumber}-word-${index}`}>
               <button
                 type="button"
-                className={[wordClassName, "is-word-button", isPenMode ? "is-pen-active" : ""]
-                  .filter(Boolean)
-                  .join(" ")}
+                className={[wordClassName, "is-word-button"].filter(Boolean).join(" ")}
                 onClick={(event) => {
                   event.preventDefault();
                   event.stopPropagation();
@@ -341,32 +335,26 @@ export function GenesisExperience({ surface }: { surface: SurfaceMode }) {
               <div className="annotation-toolbar">
                 <button
                   type="button"
-                  className={isPenMode && toolMode === "pen" ? "pen-tool is-active" : "pen-tool"}
-                  onClick={() => {
-                    setToolMode("pen");
-                    setIsPenMode(true);
-                  }}
-                  aria-pressed={isPenMode && toolMode === "pen"}
+                  className={toolMode === "pen" ? "pen-tool is-active" : "pen-tool"}
+                  onClick={() => setToolMode("pen")}
+                  aria-pressed={toolMode === "pen"}
                 >
                   ✒️ Stilo
                 </button>
                 <button
                   type="button"
-                  className={isPenMode && toolMode === "marker" ? "pen-tool is-active" : "pen-tool"}
-                  onClick={() => {
-                    setToolMode("marker");
-                    setIsPenMode(true);
-                  }}
-                  aria-pressed={isPenMode && toolMode === "marker"}
+                  className={toolMode === "marker" ? "pen-tool is-active" : "pen-tool"}
+                  onClick={() => setToolMode("marker")}
+                  aria-pressed={toolMode === "marker"}
                 >
                   🖍️ Marker
                 </button>
               </div>
 
               <div className="color-picker" role="group" aria-label="Choose annotation color">
-                <span>Color</span>
+                <span>Main colors</span>
                 <div className="color-picker__swatches color-picker__swatches--bright">
-                  {UNDERLINE_COLORS.map((color) => (
+                  {MAIN_UNDERLINE_COLORS.map((color) => (
                     <button
                       key={color}
                       type="button"
@@ -377,12 +365,19 @@ export function GenesisExperience({ surface }: { surface: SurfaceMode }) {
                     />
                   ))}
                 </div>
-              </div>
-
-              <div className="annotation-actions">
-                <button type="button" onClick={() => setIsPenMode((current) => !current)}>
-                  {isPenMode ? "Tool off" : "Tool on"}
-                </button>
+                <span>Extra colors</span>
+                <div className="color-picker__swatches">
+                  {EXTRA_UNDERLINE_COLORS.map((color) => (
+                    <button
+                      key={color}
+                      type="button"
+                      className={underlineColor === color ? "is-active" : ""}
+                      onClick={() => setUnderlineColor(color)}
+                      style={{ backgroundColor: color }}
+                      aria-label={`Use ${color}`}
+                    />
+                  ))}
+                </div>
               </div>
             </section>
 
