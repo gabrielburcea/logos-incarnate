@@ -19,7 +19,7 @@ function readStoredContextualNotes() {
   }
 }
 
-export function MeaningExplorer({ target }: { target: MeaningTarget }) {
+export function MeaningExplorer({ target, headingId }: { target: MeaningTarget; headingId?: string }) {
   const [savedNotes, setSavedNotes] = useState<Record<string, string>>(readStoredContextualNotes);
   const [draftNotes, setDraftNotes] = useState<Record<string, string>>({});
   const draft = draftNotes[target.id] ?? (savedNotes[target.id] ?? "");
@@ -41,22 +41,62 @@ export function MeaningExplorer({ target }: { target: MeaningTarget }) {
   const contextualAnalysis = savedNotes[target.id]?.trim() ?? "";
 
   return (
-    <section className="meaning-card" aria-labelledby="meaning-explorer-heading">
+    <section className="meaning-card" aria-labelledby={headingId ?? "meaning-explorer-heading"}>
       <div className="meaning-card__header">
-        <span className="eyebrow">Meaning explorer</span>
-        <h2 id="meaning-explorer-heading">
-          {target.label} ({target.originalWord})
+        <span className="eyebrow">Focus card</span>
+        <h2 id={headingId ?? "meaning-explorer-heading"}>
+          {target.label}
         </h2>
-        {target.originalScript ? <p className="original-script">{target.originalScript}</p> : null}
         <p>
-          {target.verseRange} · meaning first, context after, graph last.
+          {target.verseRange}
         </p>
       </div>
 
       <div className="meaning-card__section">
-        <h3>Core meaning</h3>
-        <p>{target.summary}</p>
+        <h3>Original word and Hebrew definition</h3>
+        <p className="lexical-line">
+          <strong>{target.originalWord}</strong>
+          {target.transliteration ? <span> · {target.transliteration}</span> : null}
+          {target.originalScript ? <span> · {target.originalScript}</span> : null}
+        </p>
+        <p>{target.hebrewDefinition}</p>
+        {target.literalSense ? <p className="literal-sense">Literal sense: {target.literalSense}</p> : null}
       </div>
+
+      <details className="meaning-detail" open>
+        <summary>Contextual analysis</summary>
+        <div className="meaning-card__section">
+          {contextualAnalysis ? (
+            <p className="saved-context-note">{contextualAnalysis}</p>
+          ) : (
+            <p>No contextual analysis yet. Add your own note below.</p>
+          )}
+          <label className="note-field">
+            <span>Your contextual note</span>
+            <textarea
+              rows={4}
+              value={draft}
+              onChange={(event) =>
+                setDraftNotes((current) => ({
+                  ...current,
+                  [target.id]: event.target.value,
+                }))
+              }
+              placeholder={`Write your contextual analysis for ${target.label.toLowerCase()}...`}
+            />
+          </label>
+          <button type="button" className="context-save-button" onClick={saveContextualAnalysis}>
+            Save contextual analysis
+          </button>
+        </div>
+      </details>
+
+      <details className="meaning-detail">
+        <summary>Core meaning</summary>
+        <div className="meaning-card__section">
+          <p>{target.summary}</p>
+        </div>
+      </details>
 
       <details className="meaning-detail">
         <summary>Why it matters here</summary>
@@ -95,34 +135,11 @@ export function MeaningExplorer({ target }: { target: MeaningTarget }) {
       </details>
 
       <details className="meaning-detail">
-        <summary>Contextual analysis</summary>
+        <summary>Graph preview (supporting layer)</summary>
         <div className="meaning-card__section">
-          {contextualAnalysis ? (
-            <p className="saved-context-note">{contextualAnalysis}</p>
-          ) : (
-            <p>No contextual analysis yet. Add your own note below.</p>
-          )}
-          <label className="note-field">
-            <span>Your contextual note</span>
-            <textarea
-              rows={4}
-              value={draft}
-              onChange={(event) =>
-                setDraftNotes((current) => ({
-                  ...current,
-                  [target.id]: event.target.value,
-                }))
-              }
-              placeholder={`Write your contextual analysis for ${target.label.toLowerCase()}...`}
-            />
-          </label>
-          <button type="button" className="context-save-button" onClick={saveContextualAnalysis}>
-            Save contextual analysis
-          </button>
+          <GraphPreview target={target} />
         </div>
       </details>
-
-      <GraphPreview target={target} />
     </section>
   );
 }

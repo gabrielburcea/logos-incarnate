@@ -249,6 +249,7 @@ Study Manuscript Mode must not begin with a large detached control panel that vi
 If Study Mode looks like a dashboard, settings form, or control console before it looks like a manuscript, the layout is wrong.
 
 ## 19. Default implementation bias
+## 18. Default implementation bias
 When uncertain, prefer:
 - stronger mode separation
 - fewer visible controls

@@ -1,5 +1,5 @@
-import { GenesisExperience } from "@/components/genesis-experience";
+import { redirect } from "next/navigation";
 
 export default function GenesisTwoPage() {
-  return <GenesisExperience />;
+  redirect("/genesis-2/reading");
 }

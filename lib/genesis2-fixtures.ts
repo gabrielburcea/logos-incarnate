@@ -16,7 +16,10 @@ export type MeaningTarget = {
   id: MeaningTargetId;
   label: string;
   originalWord: string;
+  transliteration?: string;
   originalScript?: string;
+  hebrewDefinition: string;
+  literalSense?: string;
   verseRange: string;
   summary: string;
   whyItMatters: string;
@@ -75,7 +78,11 @@ export const meaningTargets: MeaningTarget[] = [
     id: "helper",
     label: "Helper",
     originalWord: "ezer",
+    transliteration: "ʿēzer",
     originalScript: "עֵזֶר",
+    hebrewDefinition:
+      "A strong help or support, often used for rescuing aid rather than a subordinate assistant.",
+    literalSense: "Strengthening help that corresponds to a real need.",
     verseRange: "Genesis 2:18, 20",
     summary: "Helper is introduced as a needed counterpart, not a lesser assistant. The passage frames companionship as a gift that answers human aloneness.",
     whyItMatters: "Meaning comes from fit, mutuality, and correspondence more than task delegation.",
@@ -130,7 +137,11 @@ export const meaningTargets: MeaningTarget[] = [
     id: "woman",
     label: "Woman",
     originalWord: "ishah",
+    transliteration: "ʾiššâ",
     originalScript: "אִשָּׁה",
+    hebrewDefinition:
+      "Woman, wife, or female counterpart in covenant relationship language.",
+    literalSense: "The feminine partner corresponding to man (ish).",
     verseRange: "Genesis 2:22-25",
     summary: "Woman arrives as a person received with recognition, delight, and covenant nearness. The text presents shared humanity before role discussion.",
     whyItMatters: "The first response is wonder and kinship, not analysis.",
@@ -171,7 +182,11 @@ export const meaningTargets: MeaningTarget[] = [
     id: "man",
     label: "Man",
     originalWord: "adam / ish",
+    transliteration: "ʾādām / ʾîš",
     originalScript: "אָדָם / אִישׁ",
+    hebrewDefinition:
+      "Adam can denote humankind or the first man; ish often emphasizes a male person in relational context.",
+    literalSense: "A formed human person called into vocation and covenant relation.",
     verseRange: "Genesis 2:5-25",
     summary: "Man is shown as formed, placed, entrusted, commanded, and finally joined. His identity unfolds through relation to God, work, creation, and woman.",
     whyItMatters: "The chapter presents personhood as received vocation rather than self-invention.",
@@ -214,7 +229,11 @@ export const meaningTargets: MeaningTarget[] = [
     id: "one-flesh",
     label: "One flesh",
     originalWord: "basar echad",
+    transliteration: "bāśār ʾeḥād",
     originalScript: "בָּשָׂר אֶחָד",
+    hebrewDefinition:
+      "A covenant union where two lives become one shared embodied bond.",
+    literalSense: "One body-life, not merely close partnership.",
     verseRange: "Genesis 2:24",
     summary: "One flesh gathers leaving, cleaving, and union into a covenant picture of shared life. It signals more than biology; it names belonging.",
     whyItMatters: "The verse turns a personal moment into a pattern that shapes later biblical teaching on marriage and faithfulness.",
@@ -258,7 +277,11 @@ export const meaningTargets: MeaningTarget[] = [
     id: "side-rib",
     label: "Side / rib",
     originalWord: "tsela",
+    transliteration: "ṣēlāʿ",
     originalScript: "צֵלָע",
+    hebrewDefinition:
+      "Side, flank, or rib-side, suggesting proximity and shared substance.",
+    literalSense: "A side-part taken to form a corresponding counterpart.",
     verseRange: "Genesis 2:21-22",
     summary: "The side or rib image stresses shared substance and closeness. The woman is not introduced from distance but from the man's own embodied life.",
     whyItMatters: "The image supports kinship and belonging rather than hierarchy-by-separation.",
@@ -300,7 +323,11 @@ export const meaningTargets: MeaningTarget[] = [
     id: "naked-not-ashamed",
     label: "Naked / not ashamed",
     originalWord: "arummim / lo yitboshashu",
+    transliteration: "ʿărummîm / lōʾ yitbōšāšû",
     originalScript: "עֲרוּמִּים / לֹא יִתְבּשָׁשׁוּ",
+    hebrewDefinition:
+      "Uncovered and without shame, signaling transparent relational safety before the fall.",
+    literalSense: "Exposed yet unembarrassed in innocent trust.",
     verseRange: "Genesis 2:25",
     summary: "The chapter ends with unveiled presence and no shame. The image carries innocence, trust, and relational safety before fracture enters in Genesis 3.",
     whyItMatters: "This is the quiet climax of the chapter's covenant and companionship theme.",

@@ -69,8 +69,10 @@ button {
 .hero-card,
 .feature-grid article,
 .mode-bar,
+.mode-links,
 .reading-column,
 .annotation-panel,
+.study-workbench,
 .target-picker,
 .meaning-card {
   background: rgba(255, 253, 248, 0.86);
@@ -110,6 +112,7 @@ button {
 .secondary-link,
 .back-link,
 .segmented-control button,
+.segmented-control a,
 .annotation-actions button,
 .focus-targets button,
 .target-picker__buttons button {
@@ -141,6 +144,7 @@ button {
 
 .primary-link:hover,
 .segmented-control button.is-active,
+.segmented-control a.is-active,
 .annotation-actions button.is-active,
 .focus-targets button.is-active,
 .target-picker__buttons button.is-active {
@@ -151,6 +155,7 @@ button {
 .secondary-link,
 .back-link,
 .segmented-control button,
+.segmented-control a,
 .annotation-actions button,
 .focus-targets button,
 .target-picker__buttons button {
@@ -213,6 +218,11 @@ button {
   padding: 1rem 1.25rem;
 }
 
+.mode-links {
+  margin-bottom: 1.25rem;
+  padding: 1rem 1.25rem;
+}
+
 .segmented-control {
   display: inline-flex;
   flex-wrap: wrap;
@@ -220,9 +230,13 @@ button {
 }
 
 .segmented-control button,
+.segmented-control a,
 .annotation-actions button,
 .focus-targets button,
 .target-picker__buttons button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border: 1px solid var(--line);
   border-radius: 999px;
   padding: 0.8rem 1rem;
@@ -242,6 +256,7 @@ button {
 
 .reading-column,
 .annotation-panel,
+.study-workbench,
 .target-picker,
 .meaning-card {
   padding: 1.25rem;
@@ -253,6 +268,12 @@ button {
 
 .study-layout .reading-column {
   background: linear-gradient(180deg, rgba(255, 252, 246, 0.98), rgba(250, 243, 228, 0.95));
+}
+
+.study-workbench {
+  display: grid;
+  gap: 1rem;
+  margin-bottom: 1rem;
 }
 
 .reading-column__header {
@@ -279,6 +300,10 @@ button {
 .verse-list {
   display: grid;
   gap: 0.8rem;
+}
+
+.verse-list.reading {
+  gap: 0;
 }
 
 .verse-list.study {
@@ -324,6 +349,15 @@ button {
   grid-template-columns: auto 1fr;
   gap: 1rem;
   padding: 1rem;
+}
+
+.reading-layout .verse-static {
+  padding: 0.25rem 0;
+}
+
+.reading-layout .verse-card {
+  padding: 0;
+  border-radius: 0;
 }
 
 .verse-number {
@@ -389,6 +423,10 @@ button {
   flex-wrap: wrap;
   gap: 0.55rem;
   padding: 0 1rem 0.85rem 3rem;
+}
+
+.focus-card-container {
+  margin: 0.25rem 0.75rem 0.75rem 3rem;
 }
 
 .focus-targets button,
@@ -481,6 +519,15 @@ button {
   gap: 1rem;
 }
 
+.lexical-line {
+  margin: 0.15rem 0;
+}
+
+.literal-sense {
+  margin-top: 0.3rem;
+  font-style: italic;
+}
+
 .original-script {
   margin: 0;
   font-size: 1.15rem;
@@ -508,6 +555,10 @@ button {
   cursor: pointer;
   font-family: Arial, Helvetica, sans-serif;
   font-weight: 700;
+}
+
+.meaning-detail .graph-preview {
+  margin-top: 0.75rem;
 }
 
 .meaning-card__passages {
@@ -610,9 +661,11 @@ button {
   .hero-card,
   .reading-column,
   .annotation-panel,
+  .study-workbench,
   .target-picker,
   .meaning-card,
   .mode-bar,
+  .mode-links,
   .feature-grid article {
     border-radius: 20px;
     padding: 1rem;
@@ -626,6 +679,7 @@ button {
 
   .primary-link,
   .secondary-link,
+  .segmented-control a,
   .segmented-control button,
   .annotation-actions button {
     width: 100%;
@@ -640,5 +694,10 @@ button {
   .margin-note {
     margin-left: 1rem;
     padding-left: 0;
+  }
+
+  .focus-card-container {
+    margin-left: 1rem;
+    margin-right: 0;
   }
 }

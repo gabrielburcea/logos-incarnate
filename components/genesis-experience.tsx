@@ -1,19 +1,24 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   genesis2Chapter,
   meaningTargetMap,
-  meaningTargets,
   type MeaningTargetId,
 } from "@/lib/genesis2-fixtures";
 import { MeaningExplorer } from "@/components/meaning-explorer";
 
-type Mode = "reading" | "study";
+type SurfaceMode = "reading" | "study";
+
+type PhraseRange = {
+  start: number;
+  end: number;
+};
 
 type VerseAnnotation = {
   underlinedWordIndexes?: number[];
+  underlinedPhraseRanges?: PhraseRange[];
   note?: string;
   noteColor?: string;
 };
@@ -23,6 +28,27 @@ type AnnotationState = Record<number, VerseAnnotation>;
 const STORAGE_KEY = "logos-incarnate:genesis-2:annotations";
 const DEFAULT_NOTE_COLOR = "#6f4e37";
 const NOTE_COLORS = ["#6f4e37", "#7a3b2e", "#3f5f7f", "#4f6a47", "#5f3f74"];
+
+function toSafePhraseRange(raw: unknown): PhraseRange | null {
+  if (!raw || typeof raw !== "object") {
+    return null;
+  }
+
+  const start = "start" in raw ? raw.start : null;
+  const end = "end" in raw ? raw.end : null;
+  if (
+    typeof start !== "number" ||
+    typeof end !== "number" ||
+    !Number.isInteger(start) ||
+    !Number.isInteger(end) ||
+    start < 0 ||
+    end < start
+  ) {
+    return null;
+  }
+
+  return { start, end };
+}
 
 function toSafeAnnotationState(raw: unknown): AnnotationState {
   if (!raw || typeof raw !== "object") {
@@ -41,6 +67,9 @@ function toSafeAnnotationState(raw: unknown): AnnotationState {
             (index): index is number => typeof index === "number" && Number.isInteger(index) && index >= 0,
           )
         : [];
+      const underlinedPhraseRanges = Array.isArray(value.underlinedPhraseRanges)
+        ? value.underlinedPhraseRanges.map(toSafePhraseRange).filter((range): range is PhraseRange => Boolean(range))
+        : [];
       const note = typeof value.note === "string" ? value.note : "";
       const noteColor =
         typeof value.noteColor === "string" && NOTE_COLORS.includes(value.noteColor)
@@ -51,6 +80,7 @@ function toSafeAnnotationState(raw: unknown): AnnotationState {
         verseNumber,
         {
           underlinedWordIndexes,
+          underlinedPhraseRanges,
           note,
           noteColor,
         },
@@ -74,14 +104,16 @@ function readStoredAnnotations(): AnnotationState {
   }
 }
 
-export function GenesisExperience() {
-  const [mode, setMode] = useState<Mode>("reading");
+export function GenesisExperience({ surface }: { surface: SurfaceMode }) {
+  const isStudy = surface === "study";
   const [selectedVerse, setSelectedVerse] = useState<number>(18);
   const [selectedMeaning, setSelectedMeaning] = useState<MeaningTargetId>("helper");
   const [annotations, setAnnotations] = useState<AnnotationState>({});
   const [hasLoadedAnnotations, setHasLoadedAnnotations] = useState(false);
   const [noteDrafts, setNoteDrafts] = useState<Record<number, string>>({});
   const [noteColorDrafts, setNoteColorDrafts] = useState<Record<number, string>>({});
+  const [underlineMode, setUnderlineMode] = useState<"word" | "phrase">("word");
+  const [phraseStartWordIndex, setPhraseStartWordIndex] = useState<number | null>(null);
   const activeAnnotation = annotations[selectedVerse] ?? {};
   const noteDraft = noteDrafts[selectedVerse] ?? (activeAnnotation.note ?? "");
   const noteColorDraft = noteColorDrafts[selectedVerse] ?? (activeAnnotation.noteColor ?? DEFAULT_NOTE_COLOR);
@@ -107,8 +139,9 @@ export function GenesisExperience() {
     () =>
       Object.values(annotations).filter((annotation) => {
         const hasUnderline = Boolean(annotation.underlinedWordIndexes?.length);
+        const hasPhraseUnderline = Boolean(annotation.underlinedPhraseRanges?.length);
         const hasNote = Boolean(annotation.note?.trim());
-        return hasUnderline || hasNote;
+        return hasUnderline || hasPhraseUnderline || hasNote;
       }).length,
     [annotations],
   );
@@ -139,6 +172,50 @@ export function GenesisExperience() {
     });
   }
 
+  function togglePhraseUnderline(verseNumber: number, startIndex: number, endIndex: number) {
+    const start = Math.min(startIndex, endIndex);
+    const end = Math.max(startIndex, endIndex);
+    setAnnotations((current) => {
+      const currentRanges = current[verseNumber]?.underlinedPhraseRanges ?? [];
+      const hasExactRange = currentRanges.some((range) => range.start === start && range.end === end);
+      const nextRanges = hasExactRange
+        ? currentRanges.filter((range) => !(range.start === start && range.end === end))
+        : [...currentRanges, { start, end }].sort((left, right) => left.start - right.start || left.end - right.end);
+
+      return {
+        ...current,
+        [verseNumber]: {
+          ...current[verseNumber],
+          underlinedPhraseRanges: nextRanges,
+        },
+      };
+    });
+  }
+
+  function selectVerse(verseNumber: number) {
+    setSelectedVerse(verseNumber);
+    setPhraseStartWordIndex(null);
+    const verse = genesis2Chapter.verses.find((item) => item.number === verseNumber);
+    if (verse?.focusTargetIds?.length && !verse.focusTargetIds.includes(selectedMeaning)) {
+      setSelectedMeaning(verse.focusTargetIds[0]);
+    }
+  }
+
+  function handleWordInteraction(verseNumber: number, wordIndex: number) {
+    if (underlineMode === "word") {
+      toggleWordUnderline(verseNumber, wordIndex);
+      return;
+    }
+
+    if (phraseStartWordIndex === null) {
+      setPhraseStartWordIndex(wordIndex);
+      return;
+    }
+
+    togglePhraseUnderline(verseNumber, phraseStartWordIndex, wordIndex);
+    setPhraseStartWordIndex(null);
+  }
+
   function saveMarginNote() {
     updateAnnotation({
       note: noteDraft.trim(),
@@ -160,36 +237,42 @@ export function GenesisExperience() {
   function renderVerseText(verseNumber: number, verseText: string, annotation: VerseAnnotation, isSelected: boolean) {
     const words = verseText.split(" ");
     const underlined = new Set(annotation.underlinedWordIndexes ?? []);
-    const canUnderlineWords = mode === "study" && isSelected;
+    const phraseRanges = annotation.underlinedPhraseRanges ?? [];
+    const canUnderlineWords = isStudy && isSelected;
 
     return (
       <span className="verse-text">
         {words.map((word, index) => {
-          const isUnderlined = underlined.has(index);
+          const isUnderlined =
+            underlined.has(index) || phraseRanges.some((range) => index >= range.start && index <= range.end);
+          const trailingSpace = index < words.length - 1 ? " " : "";
 
           if (!canUnderlineWords) {
             return (
-              <span
-                key={`${verseNumber}-word-${index}`}
-                className={isUnderlined ? "verse-word is-underlined" : "verse-word"}
-              >
-                {word}
-                {index < words.length - 1 ? " " : ""}
-              </span>
+              <Fragment key={`${verseNumber}-word-${index}`}>
+                <span className={isUnderlined ? "verse-word is-underlined" : "verse-word"}>
+                  {word}
+                </span>
+                {trailingSpace}
+              </Fragment>
             );
           }
 
           return (
-            <button
-              key={`${verseNumber}-word-${index}`}
-              type="button"
-              className={isUnderlined ? "verse-word is-underlined is-word-button" : "verse-word is-word-button"}
-              onClick={() => toggleWordUnderline(verseNumber, index)}
-              aria-pressed={isUnderlined}
-            >
-              {word}
-              {index < words.length - 1 ? " " : ""}
-            </button>
+            <Fragment key={`${verseNumber}-word-${index}`}>
+              <button
+                type="button"
+                className={isUnderlined ? "verse-word is-underlined is-word-button" : "verse-word is-word-button"}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  handleWordInteraction(verseNumber, index);
+                }}
+                aria-pressed={isUnderlined}
+              >
+                {word}
+              </button>
+              {trailingSpace}
+            </Fragment>
           );
         })}
       </span>
@@ -197,59 +280,128 @@ export function GenesisExperience() {
   }
 
   return (
-    <main className="experience-shell">
+    <main className={`experience-shell ${isStudy ? "experience-shell--study" : "experience-shell--reading"}`}>
       <header className="experience-header">
         <div>
           <Link className="back-link" href="/">
             ← Back home
           </Link>
-          <p className="eyebrow">Phase 1 vertical slice</p>
           <h1>{genesis2Chapter.title}</h1>
-          <p className="lede">{genesis2Chapter.summary}</p>
+          {isStudy ? <p className="lede">{genesis2Chapter.summary}</p> : null}
         </div>
-        <div className="chapter-meta">
-          <span>{genesis2Chapter.translation}</span>
-          <span>{genesis2Chapter.verses.length} verses</span>
-          <span>{totalAnnotations} marked verses</span>
-        </div>
+        {isStudy ? (
+          <div className="chapter-meta">
+            <span>{genesis2Chapter.translation}</span>
+            <span>{genesis2Chapter.verses.length} verses</span>
+            <span>{totalAnnotations} marked verses</span>
+          </div>
+        ) : null}
       </header>
 
-      <section className="mode-bar" aria-label="Reading and study mode switcher">
+      <nav className="mode-links" aria-label="Switch Genesis 2 surface">
         <div className="segmented-control">
-          <button
-            type="button"
-            className={mode === "reading" ? "is-active" : ""}
-            onClick={() => setMode("reading")}
-          >
+          <Link href="/genesis-2/reading" className={!isStudy ? "is-active" : ""}>
             Reading mode
-          </button>
-          <button
-            type="button"
-            className={mode === "study" ? "is-active" : ""}
-            onClick={() => setMode("study")}
-          >
+          </Link>
+          <Link href="/genesis-2/study" className={isStudy ? "is-active" : ""}>
             Study manuscript mode
-          </button>
+          </Link>
         </div>
-        <p>
-          {mode === "reading"
-            ? "Quiet text-only presentation: just Scripture and verse numbers."
-            : "Expanded spacing, margin rails, and visible study traces for verse-by-verse work."}
-        </p>
-      </section>
+      </nav>
 
-      <div className={`experience-layout ${mode === "study" ? "study-layout" : "reading-layout"} ${mode === "reading" ? "is-reading-only" : ""}`}>
-        <section className="reading-column" aria-labelledby="chapter-text-heading">
-          <div className="reading-column__header">
-            <h2 id="chapter-text-heading">Chapter text</h2>
-            <p>
-              {mode === "reading"
-                ? "Read Genesis 2 in a calm, uncluttered manuscript view."
-                : "Select a verse to underline individual words, write a margin note, and open meaning cards."}
-            </p>
+      {isStudy ? (
+        <section className="study-workbench" aria-labelledby="study-workbench-heading">
+          <div>
+            <p className="eyebrow">Study manuscript tools</p>
+            <h2 id="study-workbench-heading">Verse {selectedVerse}</h2>
+            <p>Underline words or phrases, then save handwritten-style margin notes for the selected verse.</p>
           </div>
 
-          <div className={`verse-list ${mode}`}>
+          <div className="annotation-actions annotation-actions--helper">
+            <span>Underlining mode</span>
+            <button
+              type="button"
+              className={underlineMode === "word" ? "is-active" : ""}
+              onClick={() => {
+                setUnderlineMode("word");
+                setPhraseStartWordIndex(null);
+              }}
+            >
+              Word
+            </button>
+            <button
+              type="button"
+              className={underlineMode === "phrase" ? "is-active" : ""}
+              onClick={() => setUnderlineMode("phrase")}
+            >
+              Phrase
+            </button>
+            <small>
+              {underlineMode === "phrase"
+                ? phraseStartWordIndex === null
+                  ? "Click a start word, then an end word."
+                  : "Now click the end word to underline the phrase."
+                : "Click a word to underline or remove underline."}
+            </small>
+          </div>
+
+          <label className="note-field">
+            <span>Margin note</span>
+            <textarea
+              rows={4}
+              value={noteDraft}
+              onChange={(event) =>
+                setNoteDrafts((current) => ({
+                  ...current,
+                  [selectedVerse]: event.target.value,
+                }))
+              }
+              placeholder="Write a handwritten-style note for this verse."
+            />
+          </label>
+
+          <div className="color-picker" role="group" aria-label="Choose note color">
+            <span>Note color</span>
+            <div className="color-picker__swatches">
+              {NOTE_COLORS.map((color) => (
+                <button
+                  key={color}
+                  type="button"
+                  className={noteColorDraft === color ? "is-active" : ""}
+                  onClick={() =>
+                    setNoteColorDrafts((current) => ({
+                      ...current,
+                      [selectedVerse]: color,
+                    }))
+                  }
+                  style={{ backgroundColor: color }}
+                  aria-label={`Use ${color} for saved notes`}
+                />
+              ))}
+            </div>
+          </div>
+
+          <div className="annotation-actions">
+            <button type="button" className="is-active" onClick={saveMarginNote}>
+              Save note
+            </button>
+            <button type="button" onClick={clearMarginNote}>
+              Clear note
+            </button>
+          </div>
+        </section>
+      ) : null}
+
+      <div className={`experience-layout ${isStudy ? "study-layout manuscript-layout is-reading-only" : "reading-layout is-reading-only"}`}>
+        <section className="reading-column" aria-labelledby="chapter-text-heading">
+          {isStudy ? (
+            <div className="reading-column__header">
+              <h2 id="chapter-text-heading">Chapter text</h2>
+              <p>Select a verse, underline words or phrases, and open focus cards directly from the manuscript text.</p>
+            </div>
+          ) : null}
+
+          <div className={`verse-list ${surface}`}>
             {genesis2Chapter.verses.map((verse) => {
               const annotation = annotations[verse.number] ?? {};
               const isSelected = selectedVerse === verse.number;
@@ -260,22 +412,24 @@ export function GenesisExperience() {
                   className={[
                     "verse-card",
                     isSelected ? "is-selected" : "",
-                    annotation.underlinedWordIndexes?.length ? "has-underlines" : "",
+                    annotation.underlinedWordIndexes?.length || annotation.underlinedPhraseRanges?.length
+                      ? "has-underlines"
+                      : "",
                     annotation.note ? "has-note" : "",
                   ]
                     .filter(Boolean)
                     .join(" ")}
                 >
-                  {mode === "study" ? (
+                  {isStudy ? (
                     <div
                       className="verse-button verse-button--interactive"
                       role="button"
                       tabIndex={0}
-                      onClick={() => setSelectedVerse(verse.number)}
+                      onClick={() => selectVerse(verse.number)}
                       onKeyDown={(event) => {
                         if (event.key === "Enter" || event.key === " ") {
                           event.preventDefault();
-                          setSelectedVerse(verse.number);
+                          selectVerse(verse.number);
                         }
                       }}
                     >
@@ -289,7 +443,7 @@ export function GenesisExperience() {
                     </div>
                   )}
 
-                  {mode === "study" && annotation.note ? (
+                  {isStudy && annotation.note ? (
                     <aside
                       className="margin-note"
                       aria-label={`Note for verse ${verse.number}`}
@@ -300,7 +454,7 @@ export function GenesisExperience() {
                     </aside>
                   ) : null}
 
-                  {mode === "study" && verse.focusTargetIds?.length ? (
+                  {isStudy && verse.focusTargetIds?.length ? (
                     <div className="focus-targets" aria-label={`Meaning targets for verse ${verse.number}`}>
                       {verse.focusTargetIds.map((targetId) => (
                         <button
@@ -308,7 +462,7 @@ export function GenesisExperience() {
                           type="button"
                           className={selectedMeaning === targetId ? "is-active" : ""}
                           onClick={() => {
-                            setSelectedVerse(verse.number);
+                            selectVerse(verse.number);
                             setSelectedMeaning(targetId);
                           }}
                         >
@@ -317,94 +471,22 @@ export function GenesisExperience() {
                       ))}
                     </div>
                   ) : null}
+
+                  {isStudy &&
+                  isSelected &&
+                  verse.focusTargetIds?.includes(selectedMeaning) ? (
+                    <div className="focus-card-container">
+                      <MeaningExplorer
+                        target={meaningTargetMap[selectedMeaning]}
+                        headingId={`meaning-card-${verse.number}-${selectedMeaning}`}
+                      />
+                    </div>
+                  ) : null}
                 </article>
               );
             })}
           </div>
         </section>
-
-        {mode === "study" ? (
-          <aside className="inspector-column">
-            <section className="annotation-panel" aria-labelledby="annotation-panel-heading">
-              <div>
-                <p className="eyebrow">Study manuscript tools</p>
-                <h2 id="annotation-panel-heading">Verse {selectedVerse}</h2>
-                <p>Underline only selected words in the verse and save handwritten margin notes.</p>
-              </div>
-
-              <div className="annotation-actions annotation-actions--helper">
-                <span>Tap words in the selected verse to underline them.</span>
-              </div>
-
-              <label className="note-field">
-                <span>Margin note</span>
-                <textarea
-                  rows={4}
-                  value={noteDraft}
-                  onChange={(event) =>
-                    setNoteDrafts((current) => ({
-                      ...current,
-                      [selectedVerse]: event.target.value,
-                    }))
-                  }
-                  placeholder="Write a handwritten-style note for this verse."
-                />
-              </label>
-
-              <div className="color-picker" role="group" aria-label="Choose note color">
-                <span>Note color</span>
-                <div className="color-picker__swatches">
-                  {NOTE_COLORS.map((color) => (
-                    <button
-                      key={color}
-                      type="button"
-                      className={noteColorDraft === color ? "is-active" : ""}
-                      onClick={() =>
-                        setNoteColorDrafts((current) => ({
-                          ...current,
-                          [selectedVerse]: color,
-                        }))
-                      }
-                      style={{ backgroundColor: color }}
-                      aria-label={`Use ${color} for saved notes`}
-                    />
-                  ))}
-                </div>
-              </div>
-
-              <div className="annotation-actions">
-                <button type="button" className="is-active" onClick={saveMarginNote}>
-                  Save note
-                </button>
-                <button type="button" onClick={clearMarginNote}>
-                  Clear note
-                </button>
-              </div>
-            </section>
-
-            <MeaningExplorer target={meaningTargetMap[selectedMeaning]} />
-
-            <section className="target-picker" aria-labelledby="target-picker-heading">
-              <div>
-                <p className="eyebrow">Curated focus targets</p>
-                <h2 id="target-picker-heading">Switch focus card</h2>
-              </div>
-              <div className="target-picker__buttons">
-                {meaningTargets.map((target) => (
-                  <button
-                    key={target.id}
-                    type="button"
-                    className={selectedMeaning === target.id ? "is-active" : ""}
-                    onClick={() => setSelectedMeaning(target.id)}
-                  >
-                    <strong>{target.label}</strong>
-                    <span>{target.verseRange}</span>
-                  </button>
-                ))}
-              </div>
-            </section>
-          </aside>
-        ) : null}
       </div>
     </main>
   );
