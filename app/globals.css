@@ -236,6 +236,10 @@ button {
   align-items: start;
 }
 
+.experience-layout.is-reading-only {
+  grid-template-columns: 1fr;
+}
+
 .reading-column,
 .annotation-panel,
 .target-picker,
@@ -293,15 +297,9 @@ button {
   background: rgba(255, 255, 255, 0.52);
 }
 
-.verse-card.is-highlighted .verse-button {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.7), var(--gold));
-}
-
-.verse-card.is-underlined .verse-text {
-  text-decoration: underline;
-  text-decoration-thickness: 2px;
-  text-decoration-color: rgba(111, 78, 55, 0.7);
-  text-underline-offset: 0.18em;
+.verse-card.has-underlines .verse-button,
+.verse-card.has-note .verse-button {
+  background: rgba(255, 255, 255, 0.55);
 }
 
 .verse-button {
@@ -315,6 +313,17 @@ button {
   border-radius: 18px;
   background: transparent;
   text-align: left;
+}
+
+.verse-button--interactive {
+  cursor: pointer;
+}
+
+.verse-static {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 1rem;
+  padding: 1rem;
 }
 
 .verse-number {
@@ -333,18 +342,42 @@ button {
   line-height: 1.95;
 }
 
+.verse-word {
+  display: inline;
+}
+
+.verse-word.is-underlined {
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-decoration-color: rgba(111, 78, 55, 0.7);
+  text-underline-offset: 0.18em;
+}
+
+.verse-word.is-word-button {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+
 .margin-note {
   margin: 0.25rem 1rem 0.75rem 3rem;
   padding: 0.9rem 1rem;
-  border-left: 3px solid rgba(111, 78, 55, 0.35);
+  border-left: 3px solid currentColor;
   background: rgba(255, 250, 240, 0.95);
   border-radius: 0 14px 14px 0;
+  font-family: "Bradley Hand", "Segoe Print", "Comic Sans MS", cursive;
+  font-size: 1.1rem;
+  line-height: 1.5;
 }
 
 .margin-note__label {
   display: block;
   margin-bottom: 0.3rem;
-  color: var(--accent);
+  color: inherit;
   font-family: Arial, Helvetica, sans-serif;
   font-size: 0.8rem;
   font-weight: 700;
@@ -384,6 +417,12 @@ button {
   margin: 1rem 0;
 }
 
+.annotation-actions--helper {
+  margin: 0.5rem 0 1rem;
+  color: var(--muted);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
 .note-field {
   display: grid;
   gap: 0.6rem;
@@ -401,6 +440,32 @@ button {
   resize: vertical;
 }
 
+.color-picker {
+  display: grid;
+  gap: 0.55rem;
+  margin-top: 0.9rem;
+  font-family: Arial, Helvetica, sans-serif;
+  font-weight: 700;
+}
+
+.color-picker__swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.color-picker__swatches button {
+  width: 1.8rem;
+  height: 1.8rem;
+  border-radius: 999px;
+  border: 2px solid transparent;
+}
+
+.color-picker__swatches button.is-active {
+  border-color: var(--ink);
+  transform: scale(1.08);
+}
+
 .target-picker__buttons {
   display: grid;
   gap: 0.75rem;
@@ -416,6 +481,11 @@ button {
   gap: 1rem;
 }
 
+.original-script {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
 .meaning-card__header {
   padding-bottom: 0.9rem;
   border-bottom: 1px solid var(--line);
@@ -427,9 +497,63 @@ button {
   font-size: 1.02rem;
 }
 
-.meaning-card ul {
-  margin: 0;
-  padding-left: 1.15rem;
+.meaning-detail {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 0.8rem 0.9rem;
+  background: rgba(255, 255, 255, 0.48);
+}
+
+.meaning-detail summary {
+  cursor: pointer;
+  font-family: Arial, Helvetica, sans-serif;
+  font-weight: 700;
+}
+
+.meaning-card__passages {
+  margin-top: 0.7rem;
+}
+
+.passage-detail {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  margin-top: 0.65rem;
+  padding: 0.65rem 0.8rem;
+  background: rgba(255, 253, 248, 0.75);
+}
+
+.passage-detail summary {
+  cursor: pointer;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 0.92rem;
+}
+
+.passage-difference {
+  margin-top: 0.35rem;
+  font-size: 0.93rem;
+}
+
+.saved-context-note {
+  margin-bottom: 0.65rem;
+  padding: 0.7rem 0.8rem;
+  border-left: 3px solid var(--accent);
+  background: rgba(255, 250, 240, 0.88);
+  border-radius: 0 10px 10px 0;
+  font-family: "Bradley Hand", "Segoe Print", "Comic Sans MS", cursive;
+  font-size: 1.05rem;
+}
+
+.context-save-button {
+  margin-top: 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0.7rem 0.95rem;
+  background: var(--paper);
+}
+
+.context-save-button:hover {
+  background: var(--ink);
+  color: var(--paper);
 }
 
 .graph-preview {
