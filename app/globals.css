@@ -213,6 +213,15 @@ button {
   padding: 1rem 1.25rem;
 }
 
+.mode-bar.is-study {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+  margin-bottom: 0.75rem;
+  padding: 0;
+}
+
 .segmented-control {
   display: inline-flex;
   flex-wrap: wrap;
@@ -257,6 +266,11 @@ button {
 
 .reading-column__header {
   margin-bottom: 1.25rem;
+}
+
+.study-layout .reading-column__header {
+  margin-bottom: 0.75rem;
+  padding: 0 1rem;
 }
 
 .reading-column__header h2,
@@ -421,6 +435,10 @@ button {
 .inspector-column {
   position: sticky;
   top: 1rem;
+  align-self: start;
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
+  padding-right: 0.2rem;
 }
 
 .annotation-actions {
@@ -434,6 +452,16 @@ button {
   margin: 0.5rem 0 1rem;
   color: var(--muted);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+.selected-verse-context {
+  margin: 0;
+  padding: 0.85rem 0.9rem;
+  border-left: 3px solid var(--accent);
+  background: rgba(255, 250, 240, 0.72);
+  border-radius: 0 12px 12px 0;
+  color: var(--muted);
+  font-size: 0.98rem;
 }
 
 .note-field {

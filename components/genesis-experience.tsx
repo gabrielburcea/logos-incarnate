@@ -85,6 +85,7 @@ export function GenesisExperience() {
   const activeAnnotation = annotations[selectedVerse] ?? {};
   const noteDraft = noteDrafts[selectedVerse] ?? (activeAnnotation.note ?? "");
   const noteColorDraft = noteColorDrafts[selectedVerse] ?? (activeAnnotation.noteColor ?? DEFAULT_NOTE_COLOR);
+  const selectedVerseText = genesis2Chapter.verses.find((verse) => verse.number === selectedVerse)?.text ?? "";
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -216,7 +217,7 @@ export function GenesisExperience() {
         )}
       </header>
 
-      <section className="mode-bar" aria-label="Reading and study mode switcher">
+      <section className={`mode-bar ${mode === "study" ? "is-study" : ""}`} aria-label="Reading and study mode switcher">
         <div className="segmented-control">
           <button
             type="button"
@@ -233,19 +234,19 @@ export function GenesisExperience() {
             Study manuscript mode
           </button>
         </div>
-        {mode !== "reading" && (
-          <p>Expanded spacing, margin rails, and visible study traces for verse-by-verse work.</p>
-        )}
+        {mode === "reading" ? <p>Quiet text-only presentation: just Scripture and verse numbers.</p> : null}
       </section>
 
       <div className={`experience-layout ${mode === "study" ? "study-layout" : "reading-layout"} ${mode === "reading" ? "is-reading-only" : ""}`}>
-        <section className="reading-column" aria-labelledby="chapter-text-heading">
-          {mode !== "reading" && (
+        <section className="reading-column" aria-label="Chapter text">
+          {mode !== "reading" ? (
             <div className="reading-column__header">
-              <h2 id="chapter-text-heading">Chapter text</h2>
-              <p>Select a verse to underline individual words, write a margin note, and open meaning cards.</p>
+              <p>
+                Studying verse {selectedVerse}. Keep reading in the manuscript and use the inspector to mark notes and
+                meaning.
+              </p>
             </div>
-          )}
+          ) : null}
 
           <div className={`verse-list ${mode}`}>
             {genesis2Chapter.verses.map((verse) => {
@@ -329,6 +330,8 @@ export function GenesisExperience() {
                 <h2 id="annotation-panel-heading">Verse {selectedVerse}</h2>
                 <p>Underline only selected words in the verse and save handwritten margin notes.</p>
               </div>
+
+              <blockquote className="selected-verse-context">{selectedVerseText}</blockquote>
 
               <div className="annotation-actions annotation-actions--helper">
                 <span>Tap words in the selected verse to underline them.</span>
