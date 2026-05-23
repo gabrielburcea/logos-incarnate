@@ -16,9 +16,16 @@ type PhraseRange = {
   end: number;
 };
 
+type ColoredPhraseRange = {
+  start: number;
+  end: number;
+  color: string;
+};
+
 type VerseAnnotation = {
   underlinedWordIndexes?: number[];
-  underlinedPhraseRanges?: PhraseRange[];
+  underlinedWordColors?: Record<number, string>;
+  underlinedPhraseRanges?: ColoredPhraseRange[];
   note?: string;
   noteColor?: string;
 };
@@ -27,15 +34,19 @@ type AnnotationState = Record<number, VerseAnnotation>;
 
 const STORAGE_KEY = "logos-incarnate:genesis-2:annotations";
 const DEFAULT_NOTE_COLOR = "#6f4e37";
+const DEFAULT_UNDERLINE_COLOR = "#6f4e37";
 const NOTE_COLORS = ["#6f4e37", "#7a3b2e", "#3f5f7f", "#4f6a47", "#5f3f74"];
+const UNDERLINE_COLORS = ["#6f4e37", "#c45824", "#2f6fed", "#2f8f4e", "#7b3ff2", "#111111"];
 
-function toSafePhraseRange(raw: unknown): PhraseRange | null {
+function toSafePhraseRange(raw: unknown): ColoredPhraseRange | null {
   if (!raw || typeof raw !== "object") {
     return null;
   }
 
   const start = "start" in raw ? raw.start : null;
   const end = "end" in raw ? raw.end : null;
+  const color = "color" in raw && typeof raw.color === "string" ? raw.color : DEFAULT_UNDERLINE_COLOR;
+
   if (
     typeof start !== "number" ||
     typeof end !== "number" ||
@@ -47,7 +58,7 @@ function toSafePhraseRange(raw: unknown): PhraseRange | null {
     return null;
   }
 
-  return { start, end };
+  return { start, end, color };
 }
 
 function toSafeAnnotationState(raw: unknown): AnnotationState {
@@ -67,9 +78,22 @@ function toSafeAnnotationState(raw: unknown): AnnotationState {
             (index): index is number => typeof index === "number" && Number.isInteger(index) && index >= 0,
           )
         : [];
+
+      const underlinedWordColors =
+        value.underlinedWordColors && typeof value.underlinedWordColors === "object"
+          ? Object.fromEntries(
+              Object.entries(value.underlinedWordColors).filter(
+                ([wordIndex, color]) => !Number.isNaN(Number(wordIndex)) && typeof color === "string",
+              ),
+            )
+          : {};
+
       const underlinedPhraseRanges = Array.isArray(value.underlinedPhraseRanges)
-        ? value.underlinedPhraseRanges.map(toSafePhraseRange).filter((range): range is PhraseRange => Boolean(range))
+        ? value.underlinedPhraseRanges
+            .map(toSafePhraseRange)
+            .filter((range): range is ColoredPhraseRange => Boolean(range))
         : [];
+
       const note = typeof value.note === "string" ? value.note : "";
       const noteColor =
         typeof value.noteColor === "string" && NOTE_COLORS.includes(value.noteColor)
@@ -80,6 +104,7 @@ function toSafeAnnotationState(raw: unknown): AnnotationState {
         verseNumber,
         {
           underlinedWordIndexes,
+          underlinedWordColors,
           underlinedPhraseRanges,
           note,
           noteColor,
@@ -114,6 +139,7 @@ export function GenesisExperience({ surface }: { surface: SurfaceMode }) {
   const [noteColorDrafts, setNoteColorDrafts] = useState<Record<number, string>>({});
   const [underlineMode, setUnderlineMode] = useState<"word" | "phrase">("word");
   const [phraseStartWordIndex, setPhraseStartWordIndex] = useState<number | null>(null);
+  const [underlineColor, setUnderlineColor] = useState<string>(DEFAULT_UNDERLINE_COLOR);
   const activeAnnotation = annotations[selectedVerse] ?? {};
   const noteDraft = noteDrafts[selectedVerse] ?? (activeAnnotation.note ?? "");
   const noteColorDraft = noteColorDrafts[selectedVerse] ?? (activeAnnotation.noteColor ?? DEFAULT_NOTE_COLOR);
@@ -160,14 +186,27 @@ export function GenesisExperience({ surface }: { surface: SurfaceMode }) {
   function toggleWordUnderline(verseNumber: number, wordIndex: number) {
     setAnnotations((current) => {
       const currentIndexes = current[verseNumber]?.underlinedWordIndexes ?? [];
-      const nextIndexes = currentIndexes.includes(wordIndex)
+      const currentColors = current[verseNumber]?.underlinedWordColors ?? {};
+      const exists = currentIndexes.includes(wordIndex);
+
+      const nextIndexes = exists
         ? currentIndexes.filter((index) => index !== wordIndex)
         : [...currentIndexes, wordIndex].sort((left, right) => left - right);
+
+      const nextColors = { ...currentColors };
+
+      if (exists) {
+        delete nextColors[wordIndex];
+      } else {
+        nextColors[wordIndex] = underlineColor;
+      }
+
       return {
         ...current,
         [verseNumber]: {
           ...current[verseNumber],
           underlinedWordIndexes: nextIndexes,
+          underlinedWordColors: nextColors,
         },
       };
     });
@@ -176,12 +215,16 @@ export function GenesisExperience({ surface }: { surface: SurfaceMode }) {
   function togglePhraseUnderline(verseNumber: number, startIndex: number, endIndex: number) {
     const start = Math.min(startIndex, endIndex);
     const end = Math.max(startIndex, endIndex);
+
     setAnnotations((current) => {
       const currentRanges = current[verseNumber]?.underlinedPhraseRanges ?? [];
       const hasExactRange = currentRanges.some((range) => range.start === start && range.end === end);
+
       const nextRanges = hasExactRange
         ? currentRanges.filter((range) => !(range.start === start && range.end === end))
-        : [...currentRanges, { start, end }].sort((left, right) => left.start - right.start || left.end - right.end);
+        : [...currentRanges, { start, end, color: underlineColor }].sort(
+            (left, right) => left.start - right.start || left.end - right.end,
+          );
 
       return {
         ...current,
@@ -235,6 +278,19 @@ export function GenesisExperience({ surface }: { surface: SurfaceMode }) {
     });
   }
 
+  function getUnderlineColor(annotation: VerseAnnotation, index: number) {
+    const wordColor = annotation.underlinedWordColors?.[index];
+    if (wordColor) {
+      return wordColor;
+    }
+
+    const phraseRange = annotation.underlinedPhraseRanges?.find(
+      (range) => index >= range.start && index <= range.end,
+    );
+
+    return phraseRange?.color ?? DEFAULT_UNDERLINE_COLOR;
+  }
+
   function renderVerseText(verseNumber: number, verseText: string, annotation: VerseAnnotation, isSelected: boolean) {
     const words = verseText.split(" ");
     const underlined = new Set(annotation.underlinedWordIndexes ?? []);
@@ -247,11 +303,15 @@ export function GenesisExperience({ surface }: { surface: SurfaceMode }) {
           const isUnderlined =
             underlined.has(index) || phraseRanges.some((range) => index >= range.start && index <= range.end);
           const trailingSpace = index < words.length - 1 ? " " : "";
+          const underlineColorValue = getUnderlineColor(annotation, index);
 
           if (!canUnderlineWords) {
             return (
               <Fragment key={`${verseNumber}-word-${index}`}>
-                <span className={isUnderlined ? "verse-word is-underlined" : "verse-word"}>
+                <span
+                  className={isUnderlined ? "verse-word is-underlined" : "verse-word"}
+                  style={isUnderlined ? { ["--underline-color" as string]: underlineColorValue } : undefined}
+                >
                   {word}
                 </span>
                 {trailingSpace}
@@ -269,6 +329,7 @@ export function GenesisExperience({ surface }: { surface: SurfaceMode }) {
                   handleWordInteraction(verseNumber, index);
                 }}
                 aria-pressed={isUnderlined}
+                style={isUnderlined ? { ["--underline-color" as string]: underlineColorValue } : undefined}
               >
                 {word}
               </button>
@@ -434,6 +495,22 @@ export function GenesisExperience({ surface }: { surface: SurfaceMode }) {
                       : "Now click the end word to underline the phrase."
                     : "Click a word to underline or remove underline."}
                 </small>
+              </div>
+
+              <div className="color-picker" role="group" aria-label="Choose underline color">
+                <span>Underline pen color</span>
+                <div className="color-picker__swatches">
+                  {UNDERLINE_COLORS.map((color) => (
+                    <button
+                      key={color}
+                      type="button"
+                      className={underlineColor === color ? "is-active" : ""}
+                      onClick={() => setUnderlineColor(color)}
+                      style={{ backgroundColor: color }}
+                      aria-label={`Use ${color} for underline pen`}
+                    />
+                  ))}
+                </div>
               </div>
 
               <label className="note-field">
