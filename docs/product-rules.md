@@ -236,6 +236,19 @@ Avoid:
 - excessive chrome
 - technical overload
 
+## 18. Study Mode tools must support the manuscript, not dominate it
+Study Manuscript Mode must not begin with a large detached control panel that visually overwhelms Scripture.
+
+### Required behavior
+- the chapter text must remain the primary visual surface
+- study controls must feel attached to the active verse or active study context
+- large tool blocks must not push the manuscript far below the fold
+- the interface must not feel like a form-first editor or settings screen
+
+### Rule
+If Study Mode looks like a dashboard, settings form, or control console before it looks like a manuscript, the layout is wrong.
+
+## 19. Default implementation bias
 ## 18. Default implementation bias
 When uncertain, prefer:
 - stronger mode separation
