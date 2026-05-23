@@ -6,6 +6,36 @@ These notes capture the founder's evolving vision for Logos Incarnate so the pro
 
 The aim is to preserve not only feature ideas, but also the reasoning behind them, the product philosophy, what should be avoided, and what makes this project distinct from existing Bible apps.
 
+## Current Strategic Recommendation
+
+The best immediate starting point is not to build the full platform at once.
+
+The recommended first implementation is a narrow but powerful vertical slice centered on Genesis 2.
+
+This first version should combine:
+- chapter reading
+- Study Manuscript Mode
+- persistent highlights, underlines, and handwritten-style margin notes
+- Meaning Explorer for selected words
+- a small graph preview
+
+This would validate the product's core distinctiveness before attempting the full scope of genealogy, broader graph exploration, multi-translation expansion, or full animation storytelling.
+
+## Purpose of the First Vertical Slice
+
+The purpose of the Genesis 2 prototype is to prove that the app can:
+- feel beautiful and reverent as a reading experience
+- become a living annotated manuscript
+- surface deep meaning without information overload
+- make relationships visible through a restrained graph preview
+- demonstrate the product's difference from existing Bible study apps
+
+## Purpose
+
+These notes capture the founder's evolving vision for Logos Incarnate so the project can be revisited, re-assessed, and refined over time.
+
+The aim is to preserve not only feature ideas, but also the reasoning behind them, the product philosophy, what should be avoided, and what makes this project distinct from existing Bible apps.
+
 ## Core Vision
 
 This product should not become another Bible app that overwhelms readers with too much information.
