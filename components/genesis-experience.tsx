@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   genesis2Chapter,
@@ -166,30 +166,31 @@ export function GenesisExperience() {
       <span className="verse-text">
         {words.map((word, index) => {
           const isUnderlined = underlined.has(index);
+          const trailingSpace = index < words.length - 1 ? " " : "";
 
           if (!canUnderlineWords) {
             return (
-              <span
-                key={`${verseNumber}-word-${index}`}
-                className={isUnderlined ? "verse-word is-underlined" : "verse-word"}
-              >
-                {word}
-                {index < words.length - 1 ? " " : ""}
-              </span>
+              <Fragment key={`${verseNumber}-word-${index}`}>
+                <span className={isUnderlined ? "verse-word is-underlined" : "verse-word"}>
+                  {word}
+                </span>
+                {trailingSpace}
+              </Fragment>
             );
           }
 
           return (
-            <button
-              key={`${verseNumber}-word-${index}`}
-              type="button"
-              className={isUnderlined ? "verse-word is-underlined is-word-button" : "verse-word is-word-button"}
-              onClick={() => toggleWordUnderline(verseNumber, index)}
-              aria-pressed={isUnderlined}
-            >
-              {word}
-              {index < words.length - 1 ? " " : ""}
-            </button>
+            <Fragment key={`${verseNumber}-word-${index}`}>
+              <button
+                type="button"
+                className={isUnderlined ? "verse-word is-underlined is-word-button" : "verse-word is-word-button"}
+                onClick={() => toggleWordUnderline(verseNumber, index)}
+                aria-pressed={isUnderlined}
+              >
+                {word}
+              </button>
+              {trailingSpace}
+            </Fragment>
           );
         })}
       </span>
@@ -203,15 +204,16 @@ export function GenesisExperience() {
           <Link className="back-link" href="/">
             ← Back home
           </Link>
-          <p className="eyebrow">Phase 1 vertical slice</p>
           <h1>{genesis2Chapter.title}</h1>
-          <p className="lede">{genesis2Chapter.summary}</p>
+          {mode !== "reading" && <p className="lede">{genesis2Chapter.summary}</p>}
         </div>
-        <div className="chapter-meta">
-          <span>{genesis2Chapter.translation}</span>
-          <span>{genesis2Chapter.verses.length} verses</span>
-          <span>{totalAnnotations} marked verses</span>
-        </div>
+        {mode !== "reading" && (
+          <div className="chapter-meta">
+            <span>{genesis2Chapter.translation}</span>
+            <span>{genesis2Chapter.verses.length} verses</span>
+            <span>{totalAnnotations} marked verses</span>
+          </div>
+        )}
       </header>
 
       <section className="mode-bar" aria-label="Reading and study mode switcher">
@@ -231,23 +233,19 @@ export function GenesisExperience() {
             Study manuscript mode
           </button>
         </div>
-        <p>
-          {mode === "reading"
-            ? "Quiet text-only presentation: just Scripture and verse numbers."
-            : "Expanded spacing, margin rails, and visible study traces for verse-by-verse work."}
-        </p>
+        {mode !== "reading" && (
+          <p>Expanded spacing, margin rails, and visible study traces for verse-by-verse work.</p>
+        )}
       </section>
 
       <div className={`experience-layout ${mode === "study" ? "study-layout" : "reading-layout"} ${mode === "reading" ? "is-reading-only" : ""}`}>
         <section className="reading-column" aria-labelledby="chapter-text-heading">
-          <div className="reading-column__header">
-            <h2 id="chapter-text-heading">Chapter text</h2>
-            <p>
-              {mode === "reading"
-                ? "Read Genesis 2 in a calm, uncluttered manuscript view."
-                : "Select a verse to underline individual words, write a margin note, and open meaning cards."}
-            </p>
-          </div>
+          {mode !== "reading" && (
+            <div className="reading-column__header">
+              <h2 id="chapter-text-heading">Chapter text</h2>
+              <p>Select a verse to underline individual words, write a margin note, and open meaning cards.</p>
+            </div>
+          )}
 
           <div className={`verse-list ${mode}`}>
             {genesis2Chapter.verses.map((verse) => {

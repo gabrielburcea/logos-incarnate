@@ -281,6 +281,10 @@ button {
   gap: 0.8rem;
 }
 
+.verse-list.reading {
+  gap: 0;
+}
+
 .verse-list.study {
   gap: 1.15rem;
 }
@@ -324,6 +328,15 @@ button {
   grid-template-columns: auto 1fr;
   gap: 1rem;
   padding: 1rem;
+}
+
+.reading-layout .verse-static {
+  padding: 0.25rem 0;
+}
+
+.reading-layout .verse-card {
+  padding: 0;
+  border-radius: 0;
 }
 
 .verse-number {
