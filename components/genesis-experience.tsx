@@ -12,29 +12,17 @@ import { MeaningExplorer } from "@/components/meaning-explorer";
 type SurfaceMode = "reading" | "study";
 type ToolMode = "pen" | "marker";
 
-type ColoredPhraseRange = {
-  start: number;
-  end: number;
-  color: string;
-  tool?: ToolMode;
-};
-
 type VerseAnnotation = {
   underlinedWordIndexes?: number[];
   underlinedWordColors?: Record<number, string>;
   underlinedWordTools?: Record<number, ToolMode>;
-  underlinedPhraseRanges?: ColoredPhraseRange[];
-  note?: string;
-  noteColor?: string;
 };
 
 type AnnotationState = Record<number, VerseAnnotation>;
 
 const STORAGE_KEY = "logos-incarnate:genesis-2:annotations";
-const DEFAULT_NOTE_COLOR = "#6f4e37";
 const DEFAULT_UNDERLINE_COLOR = "#ff2d55";
 const DEFAULT_TOOL_MODE: ToolMode = "pen";
-const NOTE_COLORS = ["#6f4e37", "#7a3b2e", "#3f5f7f", "#4f6a47", "#5f3f74", "#ff2d55", "#00c2ff", "#ffd400"];
 const UNDERLINE_COLORS = [
   "#ff2d55",
   "#ff7a00",
@@ -50,30 +38,6 @@ const UNDERLINE_COLORS = [
 
 function toSafeToolMode(raw: unknown): ToolMode {
   return raw === "marker" ? "marker" : "pen";
-}
-
-function toSafePhraseRange(raw: unknown): ColoredPhraseRange | null {
-  if (!raw || typeof raw !== "object") {
-    return null;
-  }
-
-  const start = "start" in raw ? raw.start : null;
-  const end = "end" in raw ? raw.end : null;
-  const color = "color" in raw && typeof raw.color === "string" ? raw.color : DEFAULT_UNDERLINE_COLOR;
-  const tool = toSafeToolMode("tool" in raw ? raw.tool : null);
-
-  if (
-    typeof start !== "number" ||
-    typeof end !== "number" ||
-    !Number.isInteger(start) ||
-    !Number.isInteger(end) ||
-    start < 0 ||
-    end < start
-  ) {
-    return null;
-  }
-
-  return { start, end, color, tool };
 }
 
 function toSafeAnnotationState(raw: unknown): AnnotationState {
@@ -112,27 +76,12 @@ function toSafeAnnotationState(raw: unknown): AnnotationState {
             )
           : {};
 
-      const underlinedPhraseRanges = Array.isArray(value.underlinedPhraseRanges)
-        ? value.underlinedPhraseRanges
-            .map(toSafePhraseRange)
-            .filter((range): range is ColoredPhraseRange => Boolean(range))
-        : [];
-
-      const note = typeof value.note === "string" ? value.note : "";
-      const noteColor =
-        typeof value.noteColor === "string" && NOTE_COLORS.includes(value.noteColor)
-          ? value.noteColor
-          : DEFAULT_NOTE_COLOR;
-
       return [
         verseNumber,
         {
           underlinedWordIndexes,
           underlinedWordColors,
           underlinedWordTools,
-          underlinedPhraseRanges,
-          note,
-          noteColor,
         },
       ] as const;
     })
@@ -160,14 +109,9 @@ export function GenesisExperience({ surface }: { surface: SurfaceMode }) {
   const [selectedMeaning, setSelectedMeaning] = useState<MeaningTargetId>("helper");
   const [annotations, setAnnotations] = useState<AnnotationState>({});
   const [hasLoadedAnnotations, setHasLoadedAnnotations] = useState(false);
-  const [noteDrafts, setNoteDrafts] = useState<Record<number, string>>({});
-  const [noteColorDrafts, setNoteColorDrafts] = useState<Record<number, string>>({});
   const [isPenMode, setIsPenMode] = useState(false);
   const [toolMode, setToolMode] = useState<ToolMode>(DEFAULT_TOOL_MODE);
   const [underlineColor, setUnderlineColor] = useState<string>(DEFAULT_UNDERLINE_COLOR);
-  const activeAnnotation = annotations[selectedVerse] ?? {};
-  const noteDraft = noteDrafts[selectedVerse] ?? (activeAnnotation.note ?? "");
-  const noteColorDraft = noteColorDrafts[selectedVerse] ?? (activeAnnotation.noteColor ?? DEFAULT_NOTE_COLOR);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -185,16 +129,6 @@ export function GenesisExperience({ surface }: { surface: SurfaceMode }) {
 
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(annotations));
   }, [annotations, hasLoadedAnnotations]);
-
-  function updateVerseAnnotation(verseNumber: number, next: VerseAnnotation) {
-    setAnnotations((current) => ({
-      ...current,
-      [verseNumber]: {
-        ...current[verseNumber],
-        ...next,
-      },
-    }));
-  }
 
   function toggleWordUnderline(verseNumber: number, wordIndex: number) {
     setAnnotations((current) => {
@@ -221,7 +155,6 @@ export function GenesisExperience({ surface }: { surface: SurfaceMode }) {
       return {
         ...current,
         [verseNumber]: {
-          ...current[verseNumber],
           underlinedWordIndexes: nextIndexes,
           underlinedWordColors: nextColors,
           underlinedWordTools: nextTools,
@@ -248,69 +181,31 @@ export function GenesisExperience({ surface }: { surface: SurfaceMode }) {
     toggleWordUnderline(verseNumber, wordIndex);
   }
 
-  function saveMarginNote() {
-    updateVerseAnnotation(selectedVerse, {
-      note: noteDraft.trim(),
-      noteColor: noteColorDraft,
-    });
-  }
-
-  function clearMarginNote() {
-    setNoteDrafts((current) => ({
-      ...current,
-      [selectedVerse]: "",
-    }));
-    updateVerseAnnotation(selectedVerse, {
-      note: "",
-      noteColor: noteColorDraft,
-    });
-  }
-
   function getUnderlineColor(annotation: VerseAnnotation, index: number) {
-    const wordColor = annotation.underlinedWordColors?.[index];
-    if (wordColor) {
-      return wordColor;
-    }
-
-    const phraseRange = annotation.underlinedPhraseRanges?.find(
-      (range) => index >= range.start && index <= range.end,
-    );
-
-    return phraseRange?.color ?? DEFAULT_UNDERLINE_COLOR;
+    return annotation.underlinedWordColors?.[index] ?? DEFAULT_UNDERLINE_COLOR;
   }
 
   function getWordTool(annotation: VerseAnnotation, index: number): ToolMode {
-    const wordTool = annotation.underlinedWordTools?.[index];
-    if (wordTool) {
-      return wordTool;
-    }
-
-    const phraseRange = annotation.underlinedPhraseRanges?.find(
-      (range) => index >= range.start && index <= range.end,
-    );
-
-    return phraseRange?.tool ?? DEFAULT_TOOL_MODE;
+    return annotation.underlinedWordTools?.[index] ?? DEFAULT_TOOL_MODE;
   }
 
-  function renderVerseText(verseNumber: number, verseText: string, annotation: VerseAnnotation, isSelected: boolean) {
+  function renderVerseText(verseNumber: number, verseText: string, annotation: VerseAnnotation) {
     const words = verseText.split(" ");
     const underlined = new Set(annotation.underlinedWordIndexes ?? []);
-    const phraseRanges = annotation.underlinedPhraseRanges ?? [];
     const canUnderlineWords = isStudy;
 
     return (
       <span className="verse-text">
         {words.map((word, index) => {
-          const isUnderlined =
-            underlined.has(index) || phraseRanges.some((range) => index >= range.start && index <= range.end);
+          const isAnnotated = underlined.has(index);
           const trailingSpace = index < words.length - 1 ? " " : "";
           const underlineColorValue = getUnderlineColor(annotation, index);
           const appliedTool = getWordTool(annotation, index);
 
           const wordClassName = [
             "verse-word",
-            isUnderlined && appliedTool === "pen" ? "is-underlined" : "",
-            isUnderlined && appliedTool === "marker" ? "is-marker-underlined" : "",
+            isAnnotated && appliedTool === "pen" ? "is-underlined" : "",
+            isAnnotated && appliedTool === "marker" ? "is-marker-underlined" : "",
           ]
             .filter(Boolean)
             .join(" ");
@@ -320,7 +215,7 @@ export function GenesisExperience({ surface }: { surface: SurfaceMode }) {
               <Fragment key={`${verseNumber}-word-${index}`}>
                 <span
                   className={wordClassName}
-                  style={isUnderlined ? { ["--underline-color" as string]: underlineColorValue } : undefined}
+                  style={isAnnotated ? { ["--underline-color" as string]: underlineColorValue } : undefined}
                 >
                   {word}
                 </span>
@@ -345,8 +240,8 @@ export function GenesisExperience({ surface }: { surface: SurfaceMode }) {
                   event.preventDefault();
                   event.stopPropagation();
                 }}
-                aria-pressed={isUnderlined}
-                style={isUnderlined ? { ["--underline-color" as string]: underlineColorValue } : undefined}
+                aria-pressed={isAnnotated}
+                style={isAnnotated ? { ["--underline-color" as string]: underlineColorValue } : undefined}
               >
                 {word}
               </button>
@@ -393,10 +288,7 @@ export function GenesisExperience({ surface }: { surface: SurfaceMode }) {
                   className={[
                     "verse-card",
                     isSelected ? "is-selected" : "",
-                    annotation.underlinedWordIndexes?.length || annotation.underlinedPhraseRanges?.length
-                      ? "has-underlines"
-                      : "",
-                    annotation.note ? "has-note" : "",
+                    annotation.underlinedWordIndexes?.length ? "has-underlines" : "",
                   ]
                     .filter(Boolean)
                     .join(" ")}
@@ -410,46 +302,31 @@ export function GenesisExperience({ surface }: { surface: SurfaceMode }) {
                         aria-pressed={isSelected}
                       >
                         <span className="verse-number">{verse.number}</span>
-                        {renderVerseText(verse.number, verse.text, annotation, isSelected)}
+                        {renderVerseText(verse.number, verse.text, annotation)}
                       </button>
                     </div>
                   ) : (
                     <div className="verse-static">
                       <span className="verse-number">{verse.number}</span>
-                      {renderVerseText(verse.number, verse.text, annotation, false)}
+                      {renderVerseText(verse.number, verse.text, annotation)}
                     </div>
                   )}
 
-                  {isStudy ? (
-                    <div className="verse-notes-panel">
-                      {annotation.note ? (
-                        <aside
-                          className="margin-note"
-                          aria-label={`Note for verse ${verse.number}`}
-                          style={{ color: annotation.noteColor ?? DEFAULT_NOTE_COLOR }}
+                  {isStudy && verse.focusTargetIds?.length ? (
+                    <div className="focus-targets" aria-label={`Meaning targets for verse ${verse.number}`}>
+                      {verse.focusTargetIds.map((targetId) => (
+                        <button
+                          key={targetId}
+                          type="button"
+                          className={selectedMeaning === targetId ? "is-active" : ""}
+                          onClick={() => {
+                            selectVerse(verse.number);
+                            setSelectedMeaning(targetId);
+                          }}
                         >
-                          <span className="margin-note__label">Note</span>
-                          <p>{annotation.note}</p>
-                        </aside>
-                      ) : null}
-
-                      {verse.focusTargetIds?.length ? (
-                        <div className="focus-targets" aria-label={`Meaning targets for verse ${verse.number}`}>
-                          {verse.focusTargetIds.map((targetId) => (
-                            <button
-                              key={targetId}
-                              type="button"
-                              className={selectedMeaning === targetId ? "is-active" : ""}
-                              onClick={() => {
-                                selectVerse(verse.number);
-                                setSelectedMeaning(targetId);
-                              }}
-                            >
-                              {meaningTargetMap[targetId].label}
-                            </button>
-                          ))}
-                        </div>
-                      ) : null}
+                          {meaningTargetMap[targetId].label}
+                        </button>
+                      ))}
                     </div>
                   ) : null}
                 </article>
@@ -502,51 +379,9 @@ export function GenesisExperience({ surface }: { surface: SurfaceMode }) {
                 </div>
               </div>
 
-              <label className="note-field">
-                <span>Margin note</span>
-                <textarea
-                  rows={4}
-                  value={noteDraft}
-                  onChange={(event) =>
-                    setNoteDrafts((current) => ({
-                      ...current,
-                      [selectedVerse]: event.target.value,
-                    }))
-                  }
-                  placeholder="Write a handwritten-style note for this verse."
-                />
-              </label>
-
-              <div className="color-picker" role="group" aria-label="Choose note color">
-                <span>Note color</span>
-                <div className="color-picker__swatches color-picker__swatches--bright">
-                  {NOTE_COLORS.map((color) => (
-                    <button
-                      key={color}
-                      type="button"
-                      className={noteColorDraft === color ? "is-active" : ""}
-                      onClick={() =>
-                        setNoteColorDrafts((current) => ({
-                          ...current,
-                          [selectedVerse]: color,
-                        }))
-                      }
-                      style={{ backgroundColor: color }}
-                      aria-label={`Use ${color} for saved notes`}
-                    />
-                  ))}
-                </div>
-              </div>
-
               <div className="annotation-actions">
-                <button type="button" className="is-active" onClick={saveMarginNote}>
-                  Save note
-                </button>
                 <button type="button" onClick={() => setIsPenMode((current) => !current)}>
                   {isPenMode ? "Tool off" : "Tool on"}
-                </button>
-                <button type="button" onClick={clearMarginNote}>
-                  Clear note
                 </button>
               </div>
             </section>
