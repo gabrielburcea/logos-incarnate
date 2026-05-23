@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import Link from "next/link";
 import {
   genesis2Chapter,
@@ -186,11 +186,11 @@ export function GenesisExperience({ surface }: { surface: SurfaceMode }) {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(annotations));
   }, [annotations, hasLoadedAnnotations]);
 
-  function updateAnnotation(next: VerseAnnotation) {
+  function updateVerseAnnotation(verseNumber: number, next: VerseAnnotation) {
     setAnnotations((current) => ({
       ...current,
-      [selectedVerse]: {
-        ...current[selectedVerse],
+      [verseNumber]: {
+        ...current[verseNumber],
         ...next,
       },
     }));
@@ -239,6 +239,8 @@ export function GenesisExperience({ surface }: { surface: SurfaceMode }) {
   }
 
   function handleWordInteraction(verseNumber: number, wordIndex: number) {
+    selectVerse(verseNumber);
+
     if (!isPenMode) {
       return;
     }
@@ -247,7 +249,7 @@ export function GenesisExperience({ surface }: { surface: SurfaceMode }) {
   }
 
   function saveMarginNote() {
-    updateAnnotation({
+    updateVerseAnnotation(selectedVerse, {
       note: noteDraft.trim(),
       noteColor: noteColorDraft,
     });
@@ -258,7 +260,7 @@ export function GenesisExperience({ surface }: { surface: SurfaceMode }) {
       ...current,
       [selectedVerse]: "",
     }));
-    updateAnnotation({
+    updateVerseAnnotation(selectedVerse, {
       note: "",
       noteColor: noteColorDraft,
     });
@@ -294,7 +296,7 @@ export function GenesisExperience({ surface }: { surface: SurfaceMode }) {
     const words = verseText.split(" ");
     const underlined = new Set(annotation.underlinedWordIndexes ?? []);
     const phraseRanges = annotation.underlinedPhraseRanges ?? [];
-    const canUnderlineWords = isStudy && isSelected;
+    const canUnderlineWords = isStudy;
 
     return (
       <span className="verse-text">
@@ -335,8 +337,13 @@ export function GenesisExperience({ surface }: { surface: SurfaceMode }) {
                   .filter(Boolean)
                   .join(" ")}
                 onClick={(event) => {
+                  event.preventDefault();
                   event.stopPropagation();
                   handleWordInteraction(verseNumber, index);
+                }}
+                onMouseDown={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
                 }}
                 aria-pressed={isUnderlined}
                 style={isUnderlined ? { ["--underline-color" as string]: underlineColorValue } : undefined}
@@ -395,20 +402,16 @@ export function GenesisExperience({ surface }: { surface: SurfaceMode }) {
                     .join(" ")}
                 >
                   {isStudy ? (
-                    <div
-                      className="verse-button verse-button--interactive"
-                      role="button"
-                      tabIndex={0}
-                      onClick={() => selectVerse(verse.number)}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter" || event.key === " ") {
-                          event.preventDefault();
-                          selectVerse(verse.number);
-                        }
-                      }}
-                    >
-                      <span className="verse-number">{verse.number}</span>
-                      {renderVerseText(verse.number, verse.text, annotation, isSelected)}
+                    <div className="verse-button">
+                      <button
+                        type="button"
+                        className="verse-select"
+                        onClick={() => selectVerse(verse.number)}
+                        aria-pressed={isSelected}
+                      >
+                        <span className="verse-number">{verse.number}</span>
+                        {renderVerseText(verse.number, verse.text, annotation, isSelected)}
+                      </button>
                     </div>
                   ) : (
                     <div className="verse-static">
@@ -417,32 +420,36 @@ export function GenesisExperience({ surface }: { surface: SurfaceMode }) {
                     </div>
                   )}
 
-                  {isStudy && annotation.note ? (
-                    <aside
-                      className="margin-note"
-                      aria-label={`Note for verse ${verse.number}`}
-                      style={{ color: annotation.noteColor ?? DEFAULT_NOTE_COLOR }}
-                    >
-                      <span className="margin-note__label">Note</span>
-                      <p>{annotation.note}</p>
-                    </aside>
-                  ) : null}
-
-                  {isStudy && verse.focusTargetIds?.length ? (
-                    <div className="focus-targets" aria-label={`Meaning targets for verse ${verse.number}`}>
-                      {verse.focusTargetIds.map((targetId) => (
-                        <button
-                          key={targetId}
-                          type="button"
-                          className={selectedMeaning === targetId ? "is-active" : ""}
-                          onClick={() => {
-                            selectVerse(verse.number);
-                            setSelectedMeaning(targetId);
-                          }}
+                  {isStudy ? (
+                    <div className="verse-notes-panel">
+                      {annotation.note ? (
+                        <aside
+                          className="margin-note"
+                          aria-label={`Note for verse ${verse.number}`}
+                          style={{ color: annotation.noteColor ?? DEFAULT_NOTE_COLOR }}
                         >
-                          {meaningTargetMap[targetId].label}
-                        </button>
-                      ))}
+                          <span className="margin-note__label">Note</span>
+                          <p>{annotation.note}</p>
+                        </aside>
+                      ) : null}
+
+                      {verse.focusTargetIds?.length ? (
+                        <div className="focus-targets" aria-label={`Meaning targets for verse ${verse.number}`}>
+                          {verse.focusTargetIds.map((targetId) => (
+                            <button
+                              key={targetId}
+                              type="button"
+                              className={selectedMeaning === targetId ? "is-active" : ""}
+                              onClick={() => {
+                                selectVerse(verse.number);
+                                setSelectedMeaning(targetId);
+                              }}
+                            >
+                              {meaningTargetMap[targetId].label}
+                            </button>
+                          ))}
+                        </div>
+                      ) : null}
                     </div>
                   ) : null}
                 </article>
