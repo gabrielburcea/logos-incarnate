@@ -1,93 +1,56 @@
 # Logos Incarnate
 
-Logos Incarnate is a Bible study platform centered on transforming Scripture reading into an active, research-rich study experience.
+Logos Incarnate is a meaning-first Bible reading and study platform designed to help readers move from text, to meaning, to relationships, to reflection, without being overwhelmed by information overload.
 
 ## Vision
 
-This project aims to make Bible reading more interactive by turning a standard reading view into a full Bible study workspace. The goal is to support readers, teachers, students, and small groups with tools for annotation, original-language study, genealogy exploration, and visual storytelling.
+The goal is not simply to provide more Bible study data.
 
-## Core Product Direction
+The goal is to help readers understand:
+- what a word means in context
+- how often it appears
+- where else it appears
+- what those other appearances contribute
+- how people, places, themes, and passages are related
+- how biblical meaning can be explored in a calm, reverent, and visually rich way
 
-The initial product direction includes four major capabilities:
+## Product Direction
 
-### 1. Reading Mode to Study Mode
-- Transform Bible reading into a study workspace.
-- Add increased spacing between verses for easier note-taking.
-- Let users underline verses, highlight text with different colours, and write notes directly on passages.
-- Support a clean reading mode and a richer study mode as two distinct experiences.
+Logos Incarnate combines several major ideas:
 
-### 2. Original Word Study
-- Enable lookup of the original Hebrew and Greek words behind a verse.
-- Show lexical definitions and word-level study data.
-- Map where the same original word appears throughout Scripture.
-- Display English translations alongside original-language forms and definitions.
+- a clean Bible reading experience
+- Study Manuscript Mode with persistent visual annotations
+- Meaning Explorer for words, people, places, and themes
+- a visible but layered biblical knowledge graph
+- genealogy as part of the broader graph system
+- AI-guided contextual analysis grounded in structured biblical data
+- long-term animation-style storytelling for biblical ideas and chapter flows
 
-### 3. Genealogy and Biblical Lineage Exploration
-- Trace biblical people through fathers, descendants, tribes, and nations.
-- Build lineage views that help users understand historical and relational context.
-- Support navigation between people, families, and nation-level connections.
+## Core Principles
 
-### 4. Chapter Storytelling and Mini-Movie Creation
-- Let users create short visual summaries or mini-movies from Bible chapters.
-- Capture themes, subtleties, and narrative flow.
-- Support educational, devotional, and teaching use cases.
+- meaning first, not overload first
+- clarity before complexity
+- text-centered reading
+- graph-aware exploration
+- manuscript-style study
+- AI as guide, not noise
 
-## Proposed MVP
+## Current Strategic Focus
 
-A practical first release could focus on:
-- ESV reading view with verse spacing
-- Highlights, underlining, and note-taking
-- Basic original word lookup for selected verses
-- A first-pass genealogy explorer for major biblical figures
+The best immediate starting point is a narrow vertical slice centered on Genesis 2.
 
-## Suggested Architecture Areas
+This first implementation should demonstrate:
+- chapter reading
+- Study Manuscript Mode
+- persistent notes
+- Meaning Explorer
+- small graph preview
 
-As development begins, the repository will likely grow into areas such as:
-- `frontend/` for Bible reading and study interfaces
-- `backend/` for APIs, user content, and search services
-- `data/` for lexical, genealogical, and Bible-reference datasets
-- `media/` for chapter visualization and story composition assets
-- `docs/` for product planning and technical decisions
+## Documentation
 
-## Roadmap
-
-### Phase 1
-- Establish project structure
-- Build Bible reading interface
-- Add study annotations
-- Define data models for notes, highlights, and verse references
-
-### Phase 2
-- Add original word search and lexical detail
-- Build cross-reference mapping for repeated original words
-
-### Phase 3
-- Add genealogy graph and lineage navigation
-- Model relationships among persons, tribes, and nations
-
-### Phase 4
-- Prototype chapter mini-movie creation
-- Explore storyboard, timeline, and export workflows
-
-## Users
-
-This platform is intended for:
-- individual Bible readers
-- Bible study group leaders
-- teachers and preachers
-- students of Scripture
-- researchers interested in biblical language and lineage
-
-## Status
-
-This repository is in its initial planning stage.
-
-The next steps are:
-1. define the MVP in detail
-2. create feature issues
-3. choose the technical stack
-4. begin implementation of the reading-to-study experience
-
-## Repository
-
-GitHub repository: `gabrielburcea/logos-incarnate`
+See the `docs/` directory for:
+- founder notes
+- product journal
+- decision records
+- feature specs
+- architecture notes

@@ -2,107 +2,69 @@
 
 ## Goal
 
-The MVP for Logos Incarnate should prove that Bible reading can be transformed into Bible study in a natural, useful, and visually rich way.
+The MVP should prove that Bible reading can become a meaning-first study experience without overwhelming the reader.
 
-The first release should focus on the smallest feature set that delivers clear study value without requiring the full long-term vision to be completed.
+The first release should validate the product's distinctiveness through a narrow but powerful vertical slice.
 
-## MVP Scope
+## Recommended MVP Scope
 
-The MVP includes:
+The MVP should focus on Genesis 2 as the initial demonstration chapter.
 
-1. Bible reading interface
-2. Study Mode toggle
-3. Verse formatting for study
-4. Annotation tools
-5. Basic original word lookup
-6. Basic genealogy exploration
+## Included in MVP
+
+1. chapter reading interface
+2. Reading Mode / Study Manuscript Mode toggle
+3. persistent highlights and underlines
+4. handwritten-style margin notes
+5. Meaning Explorer for selected words
+6. small graph preview for selected targets
 
 ## In Scope
 
-### 1. Bible Reading Interface
-- Display Bible books, chapters, and verses
-- Render chapter text in a clean reading view
-- Allow navigation between chapters
+### 1. Chapter Reading Interface
+- render Genesis 2 in a clean reading layout
+- support verse numbering
+- allow smooth transition between reading and study modes
 
-### 2. Study Mode Toggle
-- Toggle between:
-  - Reading Mode
-  - Study Mode
-- Study Mode should optimize the screen for annotation and investigation
+### 2. Study Manuscript Mode
+- increase verse spacing
+- support annotation controls
+- preserve beautiful reading experience while opening space for study
 
-### 3. Verse Formatting for Study
-- Add larger spacing between verses
-- Preserve verse numbering
-- Improve readability for note-taking and markup
+### 3. Persistent Annotation
+- highlight text
+- underline text
+- attach handwritten-style notes
+- preserve annotation state visually on revisit
 
-### 4. Annotation Tools
-- Highlight verses in multiple colours
-- Underline verses or text ranges
-- Add notes attached to verses
-- Persist annotations for each user
+### 4. Meaning Explorer
+- tap selected words
+- show core meaning
+- show occurrence count
+- show key related passages
+- show concise contextual analysis
 
-### 5. Basic Original Word Lookup
-- Allow selection of a verse or word
-- Display:
-  - original word
-  - transliteration
-  - definition
-- Link to a small set of related occurrences for the same source word
+### 5. Graph Preview
+- show a small visible graph for selected words, people, or themes
+- keep the graph limited and understandable
+- allow future expansion later
 
-### 6. Basic Genealogy Exploration
-- Search major biblical figures
-- Show a basic lineage view
-- Display father/descendant relationships where available
-- Link genealogy data back to Scripture references
+## Out of Scope for This MVP
 
-## Out of Scope for MVP
+- full Bible coverage
+- full genealogy engine
+- full graph explorer
+- full animation pipeline
+- broad multi-translation support
+- unrestricted AI chat
+- advanced freeform drawing tools
 
-The following should not block the first release:
-
-- Full lexical search across the whole Bible
-- Advanced morphology filtering
-- Fully editable freehand writing layers
-- Full-screen genealogy graph for every person
-- Mini-movie rendering
-- Collaboration and sharing
-- Export to presentation/video formats
-
-## User Stories
-
-### Reader / Student
-- As a reader, I want to switch to Study Mode so I can examine the text more carefully.
-- As a reader, I want to highlight and underline verses so I can remember important insights.
-- As a reader, I want to add notes to verses so I can record observations and prayers.
-
-### Word Study User
-- As a student of Scripture, I want to inspect the original word behind a verse so I can understand its meaning more deeply.
-- As a student of Scripture, I want to see other places the same word appears so I can compare usage.
-
-### Genealogy User
-- As a learner, I want to search a biblical person and see their lineage so I can understand context and relationships.
-
-## MVP Success Criteria
+## Success Criteria
 
 The MVP is successful if:
-
-- users can read and navigate Bible chapters
-- users can switch into Study Mode
-- users can highlight, underline, and annotate verses
-- users can inspect at least basic original-language data
-- users can explore at least a starter genealogy experience
-- the experience is stable, clear, and useful enough for repeated study sessions
-
-## Suggested Build Order
-
-1. Chapter and verse rendering
-2. Study Mode layout
-3. Annotation persistence
-4. Original word inspector
-5. Basic genealogy explorer
-
-## Open Questions
-
-- What exact ESV access/storage model will be used?
-- What text anchoring model should notes and highlights use?
-- What original-language data source will back the lookup panel?
-- Which biblical people should be included in the first genealogy dataset?
+- the reading experience feels elegant
+- Study Manuscript Mode feels distinct and useful
+- annotations remain visible and persistent
+- Meaning Explorer helps readers grasp meaning quickly
+- the graph preview adds clarity without overload
+- the product feels clearly different from a conventional Bible app
