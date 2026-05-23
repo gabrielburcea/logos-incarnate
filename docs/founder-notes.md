@@ -30,12 +30,6 @@ The purpose of the Genesis 2 prototype is to prove that the app can:
 - make relationships visible through a restrained graph preview
 - demonstrate the product's difference from existing Bible study apps
 
-## Purpose
-
-These notes capture the founder's evolving vision for Logos Incarnate so the project can be revisited, re-assessed, and refined over time.
-
-The aim is to preserve not only feature ideas, but also the reasoning behind them, the product philosophy, what should be avoided, and what makes this project distinct from existing Bible apps.
-
 ## Core Vision
 
 This product should not become another Bible app that overwhelms readers with too much information.
