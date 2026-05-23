@@ -389,9 +389,10 @@ button {
 
 .verse-word.is-underlined {
   text-decoration: underline;
-  text-decoration-thickness: 2px;
-  text-decoration-color: rgba(111, 78, 55, 0.7);
-  text-underline-offset: 0.18em;
+  text-decoration-thickness: 3px;
+  text-decoration-color: var(--underline-color, rgba(111, 78, 55, 0.7));
+  text-underline-offset: 0.2em;
+  text-decoration-skip-ink: none;
 }
 
 .verse-word.is-word-button {
