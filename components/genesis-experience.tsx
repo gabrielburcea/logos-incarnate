@@ -36,6 +36,8 @@ const UNDERLINE_COLORS = [
   "#111111",
   "#6f4e37",
 ];
+const MAIN_UNDERLINE_COLORS = UNDERLINE_COLORS.slice(0, 5);
+const EXTRA_UNDERLINE_COLORS = UNDERLINE_COLORS.slice(5);
 
 function toSafeToolMode(raw: unknown): ToolMode {
   return raw === "marker" ? "marker" : "pen";
@@ -110,7 +112,6 @@ export function GenesisExperience({ surface }: { surface: SurfaceMode }) {
   const [selectedMeaning, setSelectedMeaning] = useState<MeaningTargetId>("helper");
   const [annotations, setAnnotations] = useState<AnnotationState>({});
   const [hasLoadedAnnotations, setHasLoadedAnnotations] = useState(false);
-  const [toolEnabled, setToolEnabled] = useState(true);
   const [toolMode, setToolMode] = useState<ToolMode>(DEFAULT_TOOL_MODE);
   const [underlineColor, setUnderlineColor] = useState<string>(DEFAULT_UNDERLINE_COLOR);
 
@@ -174,11 +175,6 @@ export function GenesisExperience({ surface }: { surface: SurfaceMode }) {
 
   function handleWordInteraction(verseNumber: number, wordIndex: number) {
     selectVerse(verseNumber);
-
-    if (!toolEnabled) {
-      return;
-    }
-
     toggleWordAnnotation(verseNumber, wordIndex);
   }
 
@@ -333,23 +329,17 @@ export function GenesisExperience({ surface }: { surface: SurfaceMode }) {
               <div className="annotation-toolbar">
                 <button
                   type="button"
-                  className={toolEnabled && toolMode === "pen" ? "pen-tool is-active" : "pen-tool"}
-                  onClick={() => {
-                    setToolMode("pen");
-                    setToolEnabled(true);
-                  }}
-                  aria-pressed={toolEnabled && toolMode === "pen"}
+                  className={toolMode === "pen" ? "pen-tool is-active" : "pen-tool"}
+                  onClick={() => setToolMode("pen")}
+                  aria-pressed={toolMode === "pen"}
                 >
                   ✒️ Stilo
                 </button>
                 <button
                   type="button"
-                  className={toolEnabled && toolMode === "marker" ? "pen-tool is-active" : "pen-tool"}
-                  onClick={() => {
-                    setToolMode("marker");
-                    setToolEnabled(true);
-                  }}
-                  aria-pressed={toolEnabled && toolMode === "marker"}
+                  className={toolMode === "marker" ? "pen-tool is-active" : "pen-tool"}
+                  onClick={() => setToolMode("marker")}
+                  aria-pressed={toolMode === "marker"}
                 >
                   🖍️ Marker
                 </button>
@@ -358,7 +348,7 @@ export function GenesisExperience({ surface }: { surface: SurfaceMode }) {
               <div className="color-picker" role="group" aria-label="Choose annotation color">
                 <span>Color</span>
                 <div className="color-picker__swatches color-picker__swatches--bright">
-                  {UNDERLINE_COLORS.map((color) => (
+                  {MAIN_UNDERLINE_COLORS.map((color) => (
                     <button
                       key={color}
                       type="button"
@@ -369,12 +359,19 @@ export function GenesisExperience({ surface }: { surface: SurfaceMode }) {
                     />
                   ))}
                 </div>
-              </div>
-
-              <div className="annotation-actions">
-                <button type="button" onClick={() => setToolEnabled((current) => !current)}>
-                  {toolEnabled ? "Tool off" : "Tool on"}
-                </button>
+                <span>Extra colors</span>
+                <div className="color-picker__swatches color-picker__swatches--bright">
+                  {EXTRA_UNDERLINE_COLORS.map((color) => (
+                    <button
+                      key={color}
+                      type="button"
+                      className={underlineColor === color ? "is-active" : ""}
+                      onClick={() => setUnderlineColor(color)}
+                      style={{ backgroundColor: color }}
+                      aria-label={`Use ${color}`}
+                    />
+                  ))}
+                </div>
               </div>
             </section>
 
