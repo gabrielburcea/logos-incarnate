@@ -11,11 +11,6 @@ import { MeaningExplorer } from "@/components/meaning-explorer";
 
 type SurfaceMode = "reading" | "study";
 
-type PhraseRange = {
-  start: number;
-  end: number;
-};
-
 type ColoredPhraseRange = {
   start: number;
   end: number;
@@ -137,13 +132,11 @@ export function GenesisExperience({ surface }: { surface: SurfaceMode }) {
   const [hasLoadedAnnotations, setHasLoadedAnnotations] = useState(false);
   const [noteDrafts, setNoteDrafts] = useState<Record<number, string>>({});
   const [noteColorDrafts, setNoteColorDrafts] = useState<Record<number, string>>({});
-  const [underlineMode, setUnderlineMode] = useState<"word" | "phrase">("word");
-  const [phraseStartWordIndex, setPhraseStartWordIndex] = useState<number | null>(null);
+  const [isPenMode, setIsPenMode] = useState(false);
   const [underlineColor, setUnderlineColor] = useState<string>(DEFAULT_UNDERLINE_COLOR);
   const activeAnnotation = annotations[selectedVerse] ?? {};
   const noteDraft = noteDrafts[selectedVerse] ?? (activeAnnotation.note ?? "");
   const noteColorDraft = noteColorDrafts[selectedVerse] ?? (activeAnnotation.noteColor ?? DEFAULT_NOTE_COLOR);
-  const selectedVerseText = genesis2Chapter.verses.find((verse) => verse.number === selectedVerse)?.text ?? "";
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -212,33 +205,8 @@ export function GenesisExperience({ surface }: { surface: SurfaceMode }) {
     });
   }
 
-  function togglePhraseUnderline(verseNumber: number, startIndex: number, endIndex: number) {
-    const start = Math.min(startIndex, endIndex);
-    const end = Math.max(startIndex, endIndex);
-
-    setAnnotations((current) => {
-      const currentRanges = current[verseNumber]?.underlinedPhraseRanges ?? [];
-      const hasExactRange = currentRanges.some((range) => range.start === start && range.end === end);
-
-      const nextRanges = hasExactRange
-        ? currentRanges.filter((range) => !(range.start === start && range.end === end))
-        : [...currentRanges, { start, end, color: underlineColor }].sort(
-            (left, right) => left.start - right.start || left.end - right.end,
-          );
-
-      return {
-        ...current,
-        [verseNumber]: {
-          ...current[verseNumber],
-          underlinedPhraseRanges: nextRanges,
-        },
-      };
-    });
-  }
-
   function selectVerse(verseNumber: number) {
     setSelectedVerse(verseNumber);
-    setPhraseStartWordIndex(null);
     const verse = genesis2Chapter.verses.find((item) => item.number === verseNumber);
     if (verse?.focusTargetIds?.length && !verse.focusTargetIds.includes(selectedMeaning)) {
       setSelectedMeaning(verse.focusTargetIds[0]);
@@ -246,18 +214,11 @@ export function GenesisExperience({ surface }: { surface: SurfaceMode }) {
   }
 
   function handleWordInteraction(verseNumber: number, wordIndex: number) {
-    if (underlineMode === "word") {
-      toggleWordUnderline(verseNumber, wordIndex);
+    if (!isPenMode) {
       return;
     }
 
-    if (phraseStartWordIndex === null) {
-      setPhraseStartWordIndex(wordIndex);
-      return;
-    }
-
-    togglePhraseUnderline(verseNumber, phraseStartWordIndex, wordIndex);
-    setPhraseStartWordIndex(null);
+    toggleWordUnderline(verseNumber, wordIndex);
   }
 
   function saveMarginNote() {
@@ -323,7 +284,12 @@ export function GenesisExperience({ surface }: { surface: SurfaceMode }) {
             <Fragment key={`${verseNumber}-word-${index}`}>
               <button
                 type="button"
-                className={isUnderlined ? "verse-word is-underlined is-word-button" : "verse-word is-word-button"}
+                className={[
+                  isUnderlined ? "verse-word is-underlined is-word-button" : "verse-word is-word-button",
+                  isPenMode ? "is-pen-active" : "",
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
                 onClick={(event) => {
                   event.stopPropagation();
                   handleWordInteraction(verseNumber, index);
@@ -375,10 +341,7 @@ export function GenesisExperience({ surface }: { surface: SurfaceMode }) {
         <section className="reading-column" aria-label="Chapter text">
           {isStudy ? (
             <div className="reading-column__header">
-              <p>
-                Studying verse {selectedVerse}. Keep reading in the manuscript and use the inspector to mark notes and
-                meaning.
-              </p>
+              <p>Use the pen to mark the manuscript directly.</p>
             </div>
           ) : null}
 
@@ -461,44 +424,19 @@ export function GenesisExperience({ surface }: { surface: SurfaceMode }) {
         {isStudy ? (
           <aside className="inspector-column">
             <section className="annotation-panel" aria-labelledby="annotation-panel-heading">
-              <div>
-                <p className="eyebrow">Study manuscript tools</p>
-                <h2 id="annotation-panel-heading">Verse {selectedVerse}</h2>
-                <p>Underline words or phrases, then save handwritten-style margin notes for the selected verse.</p>
-              </div>
-
-              <blockquote className="selected-verse-context">{selectedVerseText}</blockquote>
-
-              <div className="annotation-actions annotation-actions--helper">
-                <span>Underlining mode</span>
+              <div className="annotation-toolbar">
                 <button
                   type="button"
-                  className={underlineMode === "word" ? "is-active" : ""}
-                  onClick={() => {
-                    setUnderlineMode("word");
-                    setPhraseStartWordIndex(null);
-                  }}
+                  className={isPenMode ? "pen-tool is-active" : "pen-tool"}
+                  onClick={() => setIsPenMode((current) => !current)}
+                  aria-pressed={isPenMode}
                 >
-                  Word
+                  ✒️ Pen
                 </button>
-                <button
-                  type="button"
-                  className={underlineMode === "phrase" ? "is-active" : ""}
-                  onClick={() => setUnderlineMode("phrase")}
-                >
-                  Phrase
-                </button>
-                <small>
-                  {underlineMode === "phrase"
-                    ? phraseStartWordIndex === null
-                      ? "Click a start word, then an end word."
-                      : "Now click the end word to underline the phrase."
-                    : "Click a word to underline or remove underline."}
-                </small>
               </div>
 
               <div className="color-picker" role="group" aria-label="Choose underline color">
-                <span>Underline pen color</span>
+                <span>Pen color</span>
                 <div className="color-picker__swatches">
                   {UNDERLINE_COLORS.map((color) => (
                     <button
@@ -507,7 +445,7 @@ export function GenesisExperience({ surface }: { surface: SurfaceMode }) {
                       className={underlineColor === color ? "is-active" : ""}
                       onClick={() => setUnderlineColor(color)}
                       style={{ backgroundColor: color }}
-                      aria-label={`Use ${color} for underline pen`}
+                      aria-label={`Use ${color} for pen`}
                     />
                   ))}
                 </div>
