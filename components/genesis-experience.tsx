@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   genesis2Chapter,
@@ -21,7 +21,6 @@ type VerseAnnotation = {
 type AnnotationState = Record<number, VerseAnnotation>;
 
 const STORAGE_KEY = "logos-incarnate:genesis-2:annotations";
-const STORAGE_EVENT = "logos-incarnate:annotations-updated";
 
 function readStoredAnnotations(): AnnotationState {
   if (typeof window === "undefined") {
@@ -36,41 +35,30 @@ function readStoredAnnotations(): AnnotationState {
   }
 }
 
-function subscribeToAnnotations(onStoreChange: () => void) {
-  if (typeof window === "undefined") {
-    return () => undefined;
-  }
-
-  const handleStorageChange = () => onStoreChange();
-
-  window.addEventListener("storage", handleStorageChange);
-  window.addEventListener(STORAGE_EVENT, handleStorageChange);
-
-  return () => {
-    window.removeEventListener("storage", handleStorageChange);
-    window.removeEventListener(STORAGE_EVENT, handleStorageChange);
-  };
-}
-
-function saveStoredAnnotations(next: AnnotationState) {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-  window.dispatchEvent(new Event(STORAGE_EVENT));
-}
-
 export function GenesisExperience() {
   const [mode, setMode] = useState<Mode>("reading");
   const [selectedVerse, setSelectedVerse] = useState<number>(18);
   const [selectedMeaning, setSelectedMeaning] = useState<MeaningTargetId>("helper");
-  const annotations = useSyncExternalStore<AnnotationState>(
-    subscribeToAnnotations,
-    readStoredAnnotations,
-    () => ({}),
-  );
+  const [annotations, setAnnotations] = useState<AnnotationState>({});
+  const [hasLoadedAnnotations, setHasLoadedAnnotations] = useState(false);
   const activeAnnotation = annotations[selectedVerse] ?? {};
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setAnnotations(readStoredAnnotations());
+      setHasLoadedAnnotations(true);
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    if (!hasLoadedAnnotations) {
+      return;
+    }
+
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(annotations));
+  }, [annotations, hasLoadedAnnotations]);
 
   const totalAnnotations = useMemo(
     () =>
@@ -81,13 +69,13 @@ export function GenesisExperience() {
   );
 
   function updateAnnotation(next: VerseAnnotation) {
-    saveStoredAnnotations({
-      ...annotations,
+    setAnnotations((current) => ({
+      ...current,
       [selectedVerse]: {
-        ...annotations[selectedVerse],
+        ...current[selectedVerse],
         ...next,
       },
-    });
+    }));
   }
 
   return (
