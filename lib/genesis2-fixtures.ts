@@ -15,11 +15,21 @@ export type MeaningTargetId =
 export type MeaningTarget = {
   id: MeaningTargetId;
   label: string;
+  originalWord: string;
+  originalScript?: string;
   verseRange: string;
   summary: string;
   whyItMatters: string;
-  context: string;
-  relatedPassages: string[];
+  relatedOriginalWordPassages: Array<{
+    reference: string;
+    verseText: string;
+  }>;
+  relatedEnglishDifferentWordPassages: Array<{
+    reference: string;
+    originalWord: string;
+    verseText: string;
+    differenceNote: string;
+  }>;
   graph: {
     nodes: Array<{ id: string; label: string; role: string }>;
     edges: Array<{ from: string; to: string; label: string }>;
@@ -64,11 +74,46 @@ export const meaningTargets: MeaningTarget[] = [
   {
     id: "helper",
     label: "Helper",
+    originalWord: "ezer",
+    originalScript: "עֵזֶר",
     verseRange: "Genesis 2:18, 20",
     summary: "Helper is introduced as a needed counterpart, not a lesser assistant. The passage frames companionship as a gift that answers human aloneness.",
     whyItMatters: "Meaning comes from fit, mutuality, and correspondence more than task delegation.",
-    context: "The phrase appears after vocation and naming, showing that human flourishing still remains incomplete in isolation.",
-    relatedPassages: ["Ecclesiastes 4:9-10", "Psalm 121:1-2", "Hebrews 13:6"],
+    relatedOriginalWordPassages: [
+      {
+        reference: "Exodus 18:4",
+        verseText:
+          "And the name of the other was Eliezer: for the God of my father, said he, was mine help, and delivered me from the sword of Pharaoh:",
+      },
+      {
+        reference: "Psalm 121:1-2",
+        verseText:
+          "I will lift up mine eyes unto the hills, from whence cometh my help. My help cometh from the LORD, which made heaven and earth.",
+      },
+      {
+        reference: "Hosea 13:9",
+        verseText:
+          "O Israel, thou hast destroyed thyself; but in me is thine help.",
+      },
+    ],
+    relatedEnglishDifferentWordPassages: [
+      {
+        reference: "Acts 27:17",
+        originalWord: "boētheia",
+        verseText:
+          "Which when they had taken up, they used helps, undergirding the ship; and, fearing lest they should fall into the quicksands, strake sail, and so were driven.",
+        differenceNote:
+          "This describes practical aid in a crisis, not covenant counterpart language.",
+      },
+      {
+        reference: "Hebrews 4:16",
+        originalWord: "boētheia",
+        verseText:
+          "Let us therefore come boldly unto the throne of grace, that we may obtain mercy, and find grace to help in time of need.",
+        differenceNote:
+          "This is timely rescue language, distinct from Genesis 2 relational correspondence.",
+      },
+    ],
     graph: {
       nodes: [
         { id: "helper", label: "Helper", role: "Meaning focus" },
@@ -84,11 +129,32 @@ export const meaningTargets: MeaningTarget[] = [
   {
     id: "woman",
     label: "Woman",
+    originalWord: "ishah",
+    originalScript: "אִשָּׁה",
     verseRange: "Genesis 2:22-25",
     summary: "Woman arrives as a person received with recognition, delight, and covenant nearness. The text presents shared humanity before role discussion.",
     whyItMatters: "The first response is wonder and kinship, not analysis.",
-    context: "She is introduced through procession and speech, which gives the scene relational and liturgical weight.",
-    relatedPassages: ["Proverbs 31:10", "Song of Songs 4:7", "Galatians 3:28"],
+    relatedOriginalWordPassages: [
+      {
+        reference: "Genesis 3:20",
+        verseText: "And Adam called his wife's name Eve; because she was the mother of all living.",
+      },
+      {
+        reference: "Genesis 24:67",
+        verseText:
+          "And Isaac brought her into his mother Sarah's tent, and took Rebekah, and she became his wife; and he loved her: and Isaac was comforted after his mother's death.",
+      },
+    ],
+    relatedEnglishDifferentWordPassages: [
+      {
+        reference: "Revelation 12:1",
+        originalWord: "gynē",
+        verseText:
+          "And there appeared a great wonder in heaven; a woman clothed with the sun, and the moon under her feet, and upon her head a crown of twelve stars:",
+        differenceNote:
+          "The same English word appears in symbolic apocalyptic imagery, not Genesis creation narrative.",
+      },
+    ],
     graph: {
       nodes: [
         { id: "woman", label: "Woman", role: "Person" },
@@ -104,11 +170,32 @@ export const meaningTargets: MeaningTarget[] = [
   {
     id: "man",
     label: "Man",
+    originalWord: "adam / ish",
+    originalScript: "אָדָם / אִישׁ",
     verseRange: "Genesis 2:5-25",
     summary: "Man is shown as formed, placed, entrusted, commanded, and finally joined. His identity unfolds through relation to God, work, creation, and woman.",
     whyItMatters: "The chapter presents personhood as received vocation rather than self-invention.",
-    context: "The movement from dust to garden to covenant keeps human meaning grounded in gift and calling.",
-    relatedPassages: ["Psalm 8:4-6", "Romans 5:12-19", "1 Corinthians 15:45"],
+    relatedOriginalWordPassages: [
+      {
+        reference: "Genesis 3:17",
+        verseText:
+          "And unto Adam he said, Because thou hast hearkened unto the voice of thy wife ... cursed is the ground for thy sake;",
+      },
+      {
+        reference: "Psalm 8:4",
+        verseText:
+          "What is man, that thou art mindful of him? and the son of man, that thou visitest him?",
+      },
+    ],
+    relatedEnglishDifferentWordPassages: [
+      {
+        reference: "John 19:5",
+        originalWord: "anthrōpos",
+        verseText: "Then came Jesus forth, wearing the crown of thorns, and the purple robe. And Pilate saith unto them, Behold the man!",
+        differenceNote:
+          "This is a Greek narrative use and does not carry Genesis 2's formation-and-covenant progression.",
+      },
+    ],
     graph: {
       nodes: [
         { id: "man", label: "Man", role: "Person" },
@@ -126,11 +213,33 @@ export const meaningTargets: MeaningTarget[] = [
   {
     id: "one-flesh",
     label: "One flesh",
+    originalWord: "basar echad",
+    originalScript: "בָּשָׂר אֶחָד",
     verseRange: "Genesis 2:24",
     summary: "One flesh gathers leaving, cleaving, and union into a covenant picture of shared life. It signals more than biology; it names belonging.",
     whyItMatters: "The verse turns a personal moment into a pattern that shapes later biblical teaching on marriage and faithfulness.",
-    context: "The line follows Adam's recognition speech and becomes the chapter's interpretive hinge.",
-    relatedPassages: ["Matthew 19:4-6", "Ephesians 5:31-32", "Malachi 2:14-15"],
+    relatedOriginalWordPassages: [
+      {
+        reference: "Matthew 19:5",
+        verseText:
+          "And said, For this cause shall a man leave father and mother, and shall cleave to his wife: and they twain shall be one flesh?",
+      },
+      {
+        reference: "Ephesians 5:31",
+        verseText:
+          "For this cause shall a man leave his father and mother, and shall be joined unto his wife, and they two shall be one flesh.",
+      },
+    ],
+    relatedEnglishDifferentWordPassages: [
+      {
+        reference: "1 Corinthians 6:16",
+        originalWord: "sarx mia",
+        verseText:
+          "What? know ye not that he which is joined to an harlot is one body? for two, saith he, shall be one flesh.",
+        differenceNote:
+          "Paul uses the phrase as a warning contrast, not as a covenant ideal in Eden.",
+      },
+    ],
     graph: {
       nodes: [
         { id: "one-flesh", label: "One flesh", role: "Union" },
@@ -148,11 +257,33 @@ export const meaningTargets: MeaningTarget[] = [
   {
     id: "side-rib",
     label: "Side / rib",
+    originalWord: "tsela",
+    originalScript: "צֵלָע",
     verseRange: "Genesis 2:21-22",
     summary: "The side or rib image stresses shared substance and closeness. The woman is not introduced from distance but from the man's own embodied life.",
     whyItMatters: "The image supports kinship and belonging rather than hierarchy-by-separation.",
-    context: "The deep sleep scene slows the chapter down and marks the creation of woman as deliberate and personal.",
-    relatedPassages: ["Genesis 1:27", "1 Corinthians 11:11-12", "Ephesians 5:28-29"],
+    relatedOriginalWordPassages: [
+      {
+        reference: "Exodus 26:20",
+        verseText:
+          "And for the second side of the tabernacle on the north side there shall be twenty boards:",
+      },
+      {
+        reference: "1 Kings 6:5",
+        verseText:
+          "And against the wall of the house he built chambers round about ... against the walls of the house round about, both of the temple and of the oracle:",
+      },
+    ],
+    relatedEnglishDifferentWordPassages: [
+      {
+        reference: "John 19:34",
+        originalWord: "pleura",
+        verseText:
+          "But one of the soldiers with a spear pierced his side, and forthwith came there out blood and water.",
+        differenceNote:
+          "This refers to a pierced body side in crucifixion, not a creation act of forming a counterpart.",
+      },
+    ],
     graph: {
       nodes: [
         { id: "side-rib", label: "Side / rib", role: "Image" },
@@ -168,11 +299,32 @@ export const meaningTargets: MeaningTarget[] = [
   {
     id: "naked-not-ashamed",
     label: "Naked / not ashamed",
+    originalWord: "arummim / lo yitboshashu",
+    originalScript: "עֲרוּמִּים / לֹא יִתְבּשָׁשׁוּ",
     verseRange: "Genesis 2:25",
     summary: "The chapter ends with unveiled presence and no shame. The image carries innocence, trust, and relational safety before fracture enters in Genesis 3.",
     whyItMatters: "This is the quiet climax of the chapter's covenant and companionship theme.",
-    context: "The final line gives a moral and emotional atmosphere, not just a physical description.",
-    relatedPassages: ["Genesis 3:7-10", "Hebrews 4:13", "1 John 4:18"],
+    relatedOriginalWordPassages: [
+      {
+        reference: "Genesis 3:7",
+        verseText:
+          "And the eyes of them both were opened, and they knew that they were naked; and they sewed fig leaves together, and made themselves aprons.",
+      },
+      {
+        reference: "Genesis 3:10",
+        verseText:
+          "And he said, I heard thy voice in the garden, and I was afraid, because I was naked; and I hid myself.",
+      },
+    ],
+    relatedEnglishDifferentWordPassages: [
+      {
+        reference: "2 Corinthians 5:3",
+        originalWord: "gymnos",
+        verseText: "If so be that being clothed we shall not be found naked.",
+        differenceNote:
+          "Paul uses clothing imagery for mortality and resurrection hope, not pre-fall relational innocence.",
+      },
+    ],
     graph: {
       nodes: [
         { id: "naked-not-ashamed", label: "Naked / not ashamed", role: "State" },
