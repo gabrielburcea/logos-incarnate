@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   genesis2Chapter,
@@ -11,6 +11,11 @@ import { MeaningExplorer } from "@/components/meaning-explorer";
 
 type SurfaceMode = "reading" | "study";
 type ToolMode = "pen" | "marker";
+
+type Position = {
+  x: number;
+  y: number;
+};
 
 type VerseAnnotation = {
   underlinedWordIndexes?: number[];
@@ -113,6 +118,10 @@ export function GenesisExperience({ surface }: { surface: SurfaceMode }) {
   const [toolEnabled, setToolEnabled] = useState(true);
   const [toolMode, setToolMode] = useState<ToolMode>(DEFAULT_TOOL_MODE);
   const [underlineColor, setUnderlineColor] = useState<string>(DEFAULT_UNDERLINE_COLOR);
+  const [toolbarPosition, setToolbarPosition] = useState<Position>({ x: 20, y: 100 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragOffset, setDragOffset] = useState<Position>({ x: 0, y: 0 });
+  const toolbarRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -189,6 +198,40 @@ export function GenesisExperience({ surface }: { surface: SurfaceMode }) {
   function getWordTool(annotation: VerseAnnotation, index: number): ToolMode {
     return annotation.underlinedWordTools?.[index] ?? DEFAULT_TOOL_MODE;
   }
+
+  function handleMouseDown(event: React.MouseEvent<HTMLDivElement>) {
+    if (!toolbarRef.current) return;
+    
+    const rect = toolbarRef.current.getBoundingClientRect();
+    setDragOffset({
+      x: event.clientX - rect.left,
+      y: event.clientY - rect.top,
+    });
+    setIsDragging(true);
+  }
+
+  useEffect(() => {
+    if (!isDragging) return;
+
+    function handleMouseMove(event: MouseEvent) {
+      setToolbarPosition({
+        x: event.clientX - dragOffset.x,
+        y: event.clientY - dragOffset.y,
+      });
+    }
+
+    function handleMouseUp() {
+      setIsDragging(false);
+    }
+
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [isDragging, dragOffset]);
 
   function renderVerseText(verseNumber: number, verseText: string, annotation: VerseAnnotation) {
     const words = verseText.split(" ");
@@ -328,58 +371,77 @@ export function GenesisExperience({ surface }: { surface: SurfaceMode }) {
         </section>
 
         {isStudy ? (
-          <aside className="inspector-column">
-            <section className="annotation-panel">
-              <div className="annotation-toolbar">
-                <button
-                  type="button"
-                  className={toolEnabled && toolMode === "pen" ? "pen-tool is-active" : "pen-tool"}
-                  onClick={() => {
-                    setToolMode("pen");
-                    setToolEnabled(true);
-                  }}
-                  aria-pressed={toolEnabled && toolMode === "pen"}
-                >
-                  ✒️ Stilo
-                </button>
-                <button
-                  type="button"
-                  className={toolEnabled && toolMode === "marker" ? "pen-tool is-active" : "pen-tool"}
-                  onClick={() => {
-                    setToolMode("marker");
-                    setToolEnabled(true);
-                  }}
-                  aria-pressed={toolEnabled && toolMode === "marker"}
-                >
-                  🖍️ Marker
-                </button>
+          <>
+            <div
+              ref={toolbarRef}
+              className="floating-annotation-panel"
+              style={{
+                left: `${toolbarPosition.x}px`,
+                top: `${toolbarPosition.y}px`,
+                cursor: isDragging ? "grabbing" : "grab",
+              }}
+            >
+              <div
+                className="floating-panel-handle"
+                onMouseDown={handleMouseDown}
+              >
+                <span className="drag-indicator">⋮⋮</span>
+                <span className="panel-title">Annotation Tools</span>
               </div>
+              <div className="floating-panel-content">
+                <div className="annotation-toolbar">
+                  <button
+                    type="button"
+                    className={toolEnabled && toolMode === "pen" ? "pen-tool is-active" : "pen-tool"}
+                    onClick={() => {
+                      setToolMode("pen");
+                      setToolEnabled(true);
+                    }}
+                    aria-pressed={toolEnabled && toolMode === "pen"}
+                  >
+                    ✒️ Stilo
+                  </button>
+                  <button
+                    type="button"
+                    className={toolEnabled && toolMode === "marker" ? "pen-tool is-active" : "pen-tool"}
+                    onClick={() => {
+                      setToolMode("marker");
+                      setToolEnabled(true);
+                    }}
+                    aria-pressed={toolEnabled && toolMode === "marker"}
+                  >
+                    🖍️ Marker
+                  </button>
+                </div>
 
-              <div className="color-picker" role="group" aria-label="Choose annotation color">
-                <span>Color</span>
-                <div className="color-picker__swatches color-picker__swatches--bright">
-                  {UNDERLINE_COLORS.map((color) => (
-                    <button
-                      key={color}
-                      type="button"
-                      className={underlineColor === color ? "is-active" : ""}
-                      onClick={() => setUnderlineColor(color)}
-                      style={{ backgroundColor: color }}
-                      aria-label={`Use ${color}`}
-                    />
-                  ))}
+                <div className="color-picker" role="group" aria-label="Choose annotation color">
+                  <span>Color</span>
+                  <div className="color-picker__swatches color-picker__swatches--bright">
+                    {UNDERLINE_COLORS.map((color) => (
+                      <button
+                        key={color}
+                        type="button"
+                        className={underlineColor === color ? "is-active" : ""}
+                        onClick={() => setUnderlineColor(color)}
+                        style={{ backgroundColor: color }}
+                        aria-label={`Use ${color}`}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                <div className="annotation-actions">
+                  <button type="button" onClick={() => setToolEnabled((current) => !current)}>
+                    {toolEnabled ? "Tool off" : "Tool on"}
+                  </button>
                 </div>
               </div>
+            </div>
 
-              <div className="annotation-actions">
-                <button type="button" onClick={() => setToolEnabled((current) => !current)}>
-                  {toolEnabled ? "Tool off" : "Tool on"}
-                </button>
-              </div>
-            </section>
-
-            <MeaningExplorer target={meaningTargetMap[selectedMeaning]} />
-          </aside>
+            <aside className="inspector-column">
+              <MeaningExplorer target={meaningTargetMap[selectedMeaning]} />
+            </aside>
+          </>
         ) : null}
       </div>
     </main>
