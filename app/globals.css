@@ -1,0 +1,520 @@
+:root {
+  --bg: #f7f1e6;
+  --paper: #fffdf8;
+  --paper-strong: #fffaf0;
+  --line: rgba(88, 64, 43, 0.14);
+  --ink: #221a12;
+  --muted: #6f6255;
+  --accent: #6f4e37;
+  --accent-soft: rgba(111, 78, 55, 0.1);
+  --gold: rgba(217, 183, 87, 0.33);
+  --shadow: 0 20px 60px rgba(71, 51, 35, 0.08);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  background:
+    radial-gradient(circle at top, rgba(255, 255, 255, 0.9), transparent 35%),
+    var(--bg);
+  color: var(--ink);
+}
+
+body {
+  font-family: Georgia, "Times New Roman", serif;
+  line-height: 1.6;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+.eyebrow {
+  display: inline-block;
+  margin-bottom: 0.5rem;
+  color: var(--muted);
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.home-shell,
+.experience-shell {
+  width: min(1200px, calc(100% - 2rem));
+  margin: 0 auto;
+  padding: 2rem 0 4rem;
+}
+
+.hero-card,
+.feature-grid article,
+.mode-bar,
+.reading-column,
+.annotation-panel,
+.target-picker,
+.meaning-card {
+  background: rgba(255, 253, 248, 0.86);
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(6px);
+}
+
+.hero-card {
+  padding: 3rem;
+}
+
+.hero-card h1,
+.experience-header h1 {
+  margin: 0;
+  font-size: clamp(2.5rem, 5vw, 4.5rem);
+  line-height: 1;
+}
+
+.hero-copy,
+.lede {
+  max-width: 44rem;
+  margin: 1.25rem 0 0;
+  color: var(--muted);
+  font-size: 1.1rem;
+}
+
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.primary-link,
+.secondary-link,
+.back-link,
+.segmented-control button,
+.annotation-actions button,
+.focus-targets button,
+.target-picker__buttons button {
+  transition:
+    background-color 180ms ease,
+    color 180ms ease,
+    border-color 180ms ease,
+    transform 180ms ease;
+}
+
+.primary-link,
+.secondary-link,
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.75rem;
+  padding: 0.85rem 1.2rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  font-family: Arial, Helvetica, sans-serif;
+  font-weight: 700;
+}
+
+.primary-link {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.primary-link:hover,
+.segmented-control button.is-active,
+.annotation-actions button.is-active,
+.focus-targets button.is-active,
+.target-picker__buttons button.is-active {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.secondary-link,
+.back-link,
+.segmented-control button,
+.annotation-actions button,
+.focus-targets button,
+.target-picker__buttons button {
+  background: var(--paper);
+}
+
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.25rem;
+  margin-top: 1.5rem;
+}
+
+.feature-grid article {
+  padding: 1.5rem;
+}
+
+.feature-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.experience-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 1.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.chapter-meta {
+  display: grid;
+  gap: 0.75rem;
+  align-content: start;
+  min-width: 220px;
+}
+
+.chapter-meta span {
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(255, 253, 248, 0.72);
+  font-family: Arial, Helvetica, sans-serif;
+  color: var(--muted);
+}
+
+.mode-bar {
+  display: grid;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+  padding: 1rem 1.25rem;
+}
+
+.segmented-control {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.segmented-control button,
+.annotation-actions button,
+.focus-targets button,
+.target-picker__buttons button {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0.8rem 1rem;
+  color: var(--ink);
+}
+
+.experience-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(320px, 0.95fr);
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.reading-column,
+.annotation-panel,
+.target-picker,
+.meaning-card {
+  padding: 1.25rem;
+}
+
+.reading-layout .reading-column {
+  background: rgba(255, 252, 246, 0.92);
+}
+
+.study-layout .reading-column {
+  background: linear-gradient(180deg, rgba(255, 252, 246, 0.98), rgba(250, 243, 228, 0.95));
+}
+
+.reading-column__header {
+  margin-bottom: 1.25rem;
+}
+
+.reading-column__header h2,
+.annotation-panel h2,
+.target-picker h2,
+.meaning-card h2 {
+  margin: 0 0 0.4rem;
+  font-size: 1.45rem;
+}
+
+.reading-column__header p,
+.annotation-panel p,
+.target-picker p,
+.meaning-card p,
+.graph-preview__hero p,
+.meaning-card li {
+  color: var(--muted);
+}
+
+.verse-list {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.verse-list.study {
+  gap: 1.15rem;
+}
+
+.verse-card {
+  position: relative;
+  padding: 0.25rem;
+  border-radius: 20px;
+  border: 1px solid transparent;
+}
+
+.verse-card.is-selected {
+  border-color: var(--accent);
+  background: rgba(255, 255, 255, 0.52);
+}
+
+.verse-card.is-highlighted .verse-button {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.7), var(--gold));
+}
+
+.verse-card.is-underlined .verse-text {
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-decoration-color: rgba(111, 78, 55, 0.7);
+  text-underline-offset: 0.18em;
+}
+
+.verse-button {
+  width: 100%;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 1rem;
+  align-items: start;
+  padding: 1rem;
+  border: 0;
+  border-radius: 18px;
+  background: transparent;
+  text-align: left;
+}
+
+.verse-number {
+  color: var(--accent);
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.reading .verse-text {
+  font-size: 1.16rem;
+}
+
+.study .verse-text {
+  font-size: 1.16rem;
+  line-height: 1.95;
+}
+
+.margin-note {
+  margin: 0.25rem 1rem 0.75rem 3rem;
+  padding: 0.9rem 1rem;
+  border-left: 3px solid rgba(111, 78, 55, 0.35);
+  background: rgba(255, 250, 240, 0.95);
+  border-radius: 0 14px 14px 0;
+}
+
+.margin-note__label {
+  display: block;
+  margin-bottom: 0.3rem;
+  color: var(--accent);
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.focus-targets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  padding: 0 1rem 0.85rem 3rem;
+}
+
+.focus-targets button,
+.target-picker__buttons button {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.1rem;
+}
+
+.target-picker,
+.meaning-card,
+.annotation-panel {
+  margin-bottom: 1rem;
+}
+
+.inspector-column {
+  position: sticky;
+  top: 1rem;
+}
+
+.annotation-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin: 1rem 0;
+}
+
+.note-field {
+  display: grid;
+  gap: 0.6rem;
+  font-family: Arial, Helvetica, sans-serif;
+  font-weight: 700;
+}
+
+.note-field textarea {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 0.9rem 1rem;
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--ink);
+  resize: vertical;
+}
+
+.target-picker__buttons {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.target-picker__buttons button span {
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.meaning-card {
+  display: grid;
+  gap: 1rem;
+}
+
+.meaning-card__header {
+  padding-bottom: 0.9rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.meaning-card__section h3,
+.graph-preview__hero h3 {
+  margin: 0 0 0.45rem;
+  font-size: 1.02rem;
+}
+
+.meaning-card ul {
+  margin: 0;
+  padding-left: 1.15rem;
+}
+
+.graph-preview {
+  display: grid;
+  gap: 0.9rem;
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.56);
+}
+
+.graph-node-list,
+.graph-edge-list {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.graph-node,
+.graph-edge {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0.8rem 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: rgba(255, 253, 248, 0.88);
+}
+
+.graph-node span,
+.graph-edge em {
+  color: var(--muted);
+  font-style: normal;
+}
+
+@media (max-width: 980px) {
+  .feature-grid,
+  .experience-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .inspector-column {
+    position: static;
+  }
+}
+
+@media (max-width: 640px) {
+  .home-shell,
+  .experience-shell {
+    width: min(100% - 1rem, 100%);
+    padding-top: 1rem;
+  }
+
+  .hero-card,
+  .reading-column,
+  .annotation-panel,
+  .target-picker,
+  .meaning-card,
+  .mode-bar,
+  .feature-grid article {
+    border-radius: 20px;
+    padding: 1rem;
+  }
+
+  .hero-actions,
+  .segmented-control,
+  .annotation-actions {
+    display: grid;
+  }
+
+  .primary-link,
+  .secondary-link,
+  .segmented-control button,
+  .annotation-actions button {
+    width: 100%;
+  }
+
+  .verse-button {
+    grid-template-columns: 1fr;
+    gap: 0.45rem;
+  }
+
+  .focus-targets,
+  .margin-note {
+    margin-left: 1rem;
+    padding-left: 0;
+  }
+}
