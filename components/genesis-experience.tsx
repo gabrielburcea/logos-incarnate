@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useEffect, useRef, useState } from "react";
+import React, { Fragment, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   genesis2Chapter,
@@ -10,6 +10,7 @@ import {
 import { MeaningExplorer } from "@/components/meaning-explorer";
 import { SVGDrawingLayer } from "@/components/svg-drawing-layer";
 import { useBible } from "@/lib/hooks/use-bible";
+import { parseHTMLToVerses } from "@/lib/services/verse-parser"; //
 
 type SurfaceMode = "reading" | "study";
 type ToolMode = "pen" | "marker" | "eraser";
@@ -145,12 +146,18 @@ export function GenesisExperience({ surface }: { surface: SurfaceMode }) {
     selectChapter,
   } = useBible();
 
-  // Extract verses from chapter content
-  const verses = chapterContent?.content?.map((item: any, index: number) => ({
-    number: index + 1,
-    text: item.text || '',
-    verse: item.verseId || `${index + 1}`,
-  })) || [];
+  const verses = React.useMemo(() => {
+  if (!chapterContent?.content) return [];
+  
+  // Parse HTML from API into verse array
+  const parsedVerses = parseHTMLToVerses(chapterContent.content);
+  
+  return parsedVerses.map(parsed => ({
+    id: `verse-${parsed.number}`,
+    number: parsed.number,
+    text: parsed.text,
+  }));
+}, [chapterContent]);
   
   const [selectedVerse, setSelectedVerse] = useState<number>(18);
   const [selectedMeaning, setSelectedMeaning] = useState<MeaningTargetId>("helper");
@@ -589,7 +596,7 @@ export function GenesisExperience({ surface }: { surface: SurfaceMode }) {
               </div>
             )}
             
-            {!loading && !error && chapterContent && chapterContent.verses.map((verse) => {
+            {!loading && !error && verses.length > 0 && verses.map((verse) => {
               const annotation = annotations[verse.number] ?? {};
               const isSelected = selectedVerse === verse.number;
 
@@ -617,23 +624,7 @@ export function GenesisExperience({ surface }: { surface: SurfaceMode }) {
                     <div className="verse-text-wrap">{renderVerseText(verse.number, verse.text, annotation)}</div>
                   </div>
 
-                  {isStudy && verse.focusTargetIds?.length ? (
-                    <div className="focus-targets" aria-label={`Meaning targets for verse ${verse.number}`}>
-                      {verse.focusTargetIds.map((targetId) => (
-                        <button
-                          key={targetId}
-                          type="button"
-                          className={selectedMeaning === targetId ? "is-active" : ""}
-                          onClick={() => {
-                            selectVerse(verse.number);
-                            setSelectedMeaning(targetId);
-                          }}
-                        >
-                          {meaningTargetMap[targetId].label}
-                        </button>
-                      ))}
-                    </div>
-                  ) : null}
+                  {/* Meaning explorer temporarily disabled - was Genesis 2 specific */}
                 </article>
               );
             })}

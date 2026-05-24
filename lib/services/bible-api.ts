@@ -1,4 +1,4 @@
-const API_KEY = '78a9f6124f344018-01';
+const API_KEY = process.env.NEXT_PUBLIC_BIBLE_API_KEY;
 const BASE_URL = 'https://api.scripture.api.bible/v1';
 
 export interface BibleVersion {
@@ -9,7 +9,7 @@ export interface BibleVersion {
   language: {
     id: string;
     name: string;
-  };
+  }
 }
 
 export interface Book {
@@ -62,7 +62,7 @@ class BibleAPIService {
 
   constructor() {
     this.headers = {
-      'api-key': API_KEY,
+      'api-key': API_KEY || '',
       'Accept': 'application/json',
     };
   }
