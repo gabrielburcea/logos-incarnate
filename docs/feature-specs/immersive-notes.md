@@ -38,11 +38,12 @@ When the user returns later, the chapter still appears as their annotated study 
 - notes anchored to verses or word ranges
 - visual placement near the related text
 
-### 3. Canvas Overlay Layer
-- arrows
-- lines
-- connectors
-- simple markings linking concepts on the page
+### 3. SVG Drawing Layer
+- freehand pen/marker strokes
+- arrows connecting concepts
+- lines and connectors between words or phrases
+- circles, brackets, and visual emphasis marks
+- all stored as scalable vector graphics (SVG) for quality and future animation integration
 
 ## Anchoring Model
 
@@ -50,7 +51,8 @@ Annotations should support anchoring to:
 - verse
 - verse range
 - word range
-- approximate page/canvas position for visual note placement
+- SVG coordinate positions for freehand drawings
+- relative positioning for responsive layout compatibility
 
 ## Persistence
 
@@ -63,8 +65,8 @@ The visual placement and appearance of notes should be saved so that the annotat
 - VerseAnchor
 - WordAnchor
 - MarginNote
-- OverlayMark
-- StudyCanvasState
+- SVGStroke (freehand drawing paths)
+- StudyDrawingState
 
 ### Required Fields
 - id

@@ -8,9 +8,11 @@ import {
   type MeaningTargetId,
 } from "@/lib/genesis2-fixtures";
 import { MeaningExplorer } from "@/components/meaning-explorer";
+import { SVGDrawingLayer } from "@/components/svg-drawing-layer";
+import { useBible } from "@/lib/hooks/use-bible";
 
 type SurfaceMode = "reading" | "study";
-type ToolMode = "pen" | "marker";
+type ToolMode = "pen" | "marker" | "eraser";
 
 type Position = {
   x: number;
@@ -25,17 +27,30 @@ type VerseAnnotation = {
 
 type AnnotationState = Record<number, VerseAnnotation>;
 
+type SVGStroke = {
+  id: string;
+  points: Array<{ x: number; y: number }>;
+  color: string;
+  width: number;
+  opacity: number;
+  tool: "pen" | "marker";
+};
+
 const STORAGE_KEY = "logos-incarnate:genesis-2:annotations";
+const SVG_STORAGE_KEY = "logos-incarnate:genesis-2:svg-strokes";
 const DEFAULT_UNDERLINE_COLOR = "#ff2d55";
 const DEFAULT_TOOL_MODE: ToolMode = "pen";
 
-const UNDERLINE_COLORS = [
+const MAIN_COLORS = [
   "#ff2d55",
   "#ff7a00",
   "#ffd400",
-  "#39ff14",
   "#00c2ff",
   "#2f6fed",
+];
+
+const EXTRA_COLORS = [
+  "#39ff14",
   "#b026ff",
   "#ff1493",
   "#111111",
@@ -43,7 +58,9 @@ const UNDERLINE_COLORS = [
 ];
 
 function toSafeToolMode(raw: unknown): ToolMode {
-  return raw === "marker" ? "marker" : "pen";
+  if (raw === "marker") return "marker";
+  if (raw === "eraser") return "eraser";
+  return "pen";
 }
 
 function toSafeAnnotationState(raw: unknown): AnnotationState {
@@ -111,17 +128,76 @@ function readStoredAnnotations(): AnnotationState {
 
 export function GenesisExperience({ surface }: { surface: SurfaceMode }) {
   const isStudy = surface === "study";
+  
+  // Bible API integration
+  const {
+    bibles,
+    selectedBibleId,
+    books,
+    selectedBookId,
+    chapters,
+    selectedChapterId,
+    chapterContent,
+    loading,
+    error,
+    selectBible,
+    selectBook,
+    selectChapter,
+  } = useBible();
+
+  // Extract verses from chapter content
+  const verses = chapterContent?.content?.map((item: any, index: number) => ({
+    number: index + 1,
+    text: item.text || '',
+    verse: item.verseId || `${index + 1}`,
+  })) || [];
+  
   const [selectedVerse, setSelectedVerse] = useState<number>(18);
   const [selectedMeaning, setSelectedMeaning] = useState<MeaningTargetId>("helper");
   const [annotations, setAnnotations] = useState<AnnotationState>({});
   const [hasLoadedAnnotations, setHasLoadedAnnotations] = useState(false);
-  const [toolEnabled, setToolEnabled] = useState(true);
   const [toolMode, setToolMode] = useState<ToolMode>(DEFAULT_TOOL_MODE);
   const [underlineColor, setUnderlineColor] = useState<string>(DEFAULT_UNDERLINE_COLOR);
   const [toolbarPosition, setToolbarPosition] = useState<Position>({ x: 20, y: 100 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState<Position>({ x: 0, y: 0 });
   const toolbarRef = useRef<HTMLDivElement>(null);
+  const [isAnnotating, setIsAnnotating] = useState(false);
+  const [annotatingVerse, setAnnotatingVerse] = useState<number | null>(null);
+  const [showMeaningModal, setShowMeaningModal] = useState(false);
+  const [meaningModalPinned, setMeaningModalPinned] = useState(false);
+  const [svgStrokes, setSvgStrokes] = useState<SVGStroke[]>([]);
+  const [hasLoadedSvg, setHasLoadedSvg] = useState(false);
+  const readingColumnRef = useRef<HTMLDivElement>(null);
+  const [showTranslationDropdown, setShowTranslationDropdown] = useState(false);
+  const translationDropdownRef = useRef<HTMLDivElement>(null);
+  
+  // Use refs to always have current tool state (avoid stale closures)
+  const toolModeRef = useRef<ToolMode>(DEFAULT_TOOL_MODE);
+  const underlineColorRef = useRef<string>(DEFAULT_UNDERLINE_COLOR);
+  
+  // Keep refs in sync with state
+  useEffect(() => {
+    toolModeRef.current = toolMode;
+  }, [toolMode]);
+  
+  useEffect(() => {
+    underlineColorRef.current = underlineColor;
+  }, [underlineColor]);
+
+  // Close translation dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (translationDropdownRef.current && !translationDropdownRef.current.contains(e.target as Node)) {
+        setShowTranslationDropdown(false);
+      }
+    };
+
+    if (showTranslationDropdown) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [showTranslationDropdown]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -133,12 +209,35 @@ export function GenesisExperience({ surface }: { surface: SurfaceMode }) {
   }, []);
 
   useEffect(() => {
+    const timer = window.setTimeout(() => {
+      const raw = window.localStorage.getItem(SVG_STORAGE_KEY);
+      if (raw) {
+        try {
+          setSvgStrokes(JSON.parse(raw));
+        } catch {
+          setSvgStrokes([]);
+        }
+      }
+      setHasLoadedSvg(true);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
     if (!hasLoadedAnnotations) {
       return;
     }
 
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(annotations));
   }, [annotations, hasLoadedAnnotations]);
+
+  useEffect(() => {
+    if (!hasLoadedSvg) {
+      return;
+    }
+
+    window.localStorage.setItem(SVG_STORAGE_KEY, JSON.stringify(svgStrokes));
+  }, [svgStrokes, hasLoadedSvg]);
 
   function selectVerse(verseNumber: number) {
     setSelectedVerse(verseNumber);
@@ -181,15 +280,79 @@ export function GenesisExperience({ surface }: { surface: SurfaceMode }) {
     });
   }
 
-  function handleWordInteraction(verseNumber: number, wordIndex: number) {
-    selectVerse(verseNumber);
+  function addWordAnnotation(verseNumber: number, wordIndex: number) {
+    setAnnotations((current) => {
+      const currentIndexes = current[verseNumber]?.underlinedWordIndexes ?? [];
+      const currentColors = current[verseNumber]?.underlinedWordColors ?? {};
+      const currentTools = current[verseNumber]?.underlinedWordTools ?? {};
+      
+      if (currentIndexes.includes(wordIndex)) {
+        return current;
+      }
 
-    if (!toolEnabled) {
-      return;
-    }
+      const nextIndexes = [...currentIndexes, wordIndex].sort((left, right) => left - right);
+      // Use ref values to avoid stale state
+      const nextColors = { ...currentColors, [wordIndex]: underlineColorRef.current };
+      const nextTools = { ...currentTools, [wordIndex]: toolModeRef.current };
 
-    toggleWordAnnotation(verseNumber, wordIndex);
+      return {
+        ...current,
+        [verseNumber]: {
+          underlinedWordIndexes: nextIndexes,
+          underlinedWordColors: nextColors,
+          underlinedWordTools: nextTools,
+        },
+      };
+    });
   }
+
+  function handleWordClick(verseNumber: number, wordIndex: number) {
+    // Open meaning modal (doesn't affect annotations)
+    selectVerse(verseNumber);
+    setShowMeaningModal(true);
+  }
+
+  function handleWordMouseDown(verseNumber: number, wordIndex: number) {
+    setIsAnnotating(true);
+    setAnnotatingVerse(verseNumber);
+    
+    // Eraser removes annotation, others add
+    if (toolModeRef.current === "eraser") {
+      toggleWordAnnotation(verseNumber, wordIndex);
+    } else {
+      addWordAnnotation(verseNumber, wordIndex);
+    }
+  }
+
+  function handleWordMouseEnter(verseNumber: number, wordIndex: number) {
+    if (isAnnotating && annotatingVerse === verseNumber) {
+      if (toolModeRef.current === "eraser") {
+        // Eraser removes on hover during drag
+        const currentIndexes = annotations[verseNumber]?.underlinedWordIndexes ?? [];
+        if (currentIndexes.includes(wordIndex)) {
+          toggleWordAnnotation(verseNumber, wordIndex);
+        }
+      } else {
+        addWordAnnotation(verseNumber, wordIndex);
+      }
+    }
+  }
+
+  function handleWordMouseUp() {
+    setIsAnnotating(false);
+    setAnnotatingVerse(null);
+  }
+
+  useEffect(() => {
+    if (isAnnotating) {
+      const handleGlobalMouseUp = () => {
+        setIsAnnotating(false);
+        setAnnotatingVerse(null);
+      };
+      document.addEventListener('mouseup', handleGlobalMouseUp);
+      return () => document.removeEventListener('mouseup', handleGlobalMouseUp);
+    }
+  }, [isAnnotating]);
 
   function getWordColor(annotation: VerseAnnotation, index: number) {
     return annotation.underlinedWordColors?.[index] ?? DEFAULT_UNDERLINE_COLOR;
@@ -272,14 +435,23 @@ export function GenesisExperience({ surface }: { surface: SurfaceMode }) {
               <button
                 type="button"
                 className={[wordClassName, "is-word-button"].filter(Boolean).join(" ")}
-                onClick={(event) => {
-                  event.preventDefault();
-                  event.stopPropagation();
-                  handleWordInteraction(verseNumber, index);
-                }}
                 onMouseDown={(event) => {
                   event.preventDefault();
                   event.stopPropagation();
+                  handleWordMouseDown(verseNumber, index);
+                }}
+                onMouseEnter={() => {
+                  handleWordMouseEnter(verseNumber, index);
+                }}
+                onMouseUp={() => {
+                  handleWordMouseUp();
+                }}
+                onClick={(event) => {
+                  if (!isAnnotating) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    handleWordClick(verseNumber, index);
+                  }
                 }}
                 aria-pressed={isAnnotated}
                 style={isAnnotated ? { ["--underline-color" as string]: colorValue } : undefined}
@@ -296,36 +468,134 @@ export function GenesisExperience({ surface }: { surface: SurfaceMode }) {
 
   return (
     <main className={`experience-shell ${isStudy ? "experience-shell--study" : "experience-shell--reading"}`}>
-      <header className="experience-header">
-        <div>
-          <Link className="back-link" href="/">
-            ← Back home
-          </Link>
-          <h1>{genesis2Chapter.title}</h1>
-        </div>
-      </header>
+      {/* Back link - top left corner */}
+      <Link className="back-link-minimal" href="/" title="Back to home">
+        ← 
+      </Link>
 
-      <nav className={`mode-links ${isStudy ? "is-study" : ""}`} aria-label="Switch Genesis 2 surface">
-        <div className="segmented-control">
-          <Link href="/genesis-2/reading" className={!isStudy ? "is-active" : ""}>
-            Reading mode
-          </Link>
-          <Link href="/genesis-2/study" className={isStudy ? "is-active" : ""}>
-            Study manuscript mode
-          </Link>
+      {/* Step Bible style selector - compact horizontal layout: Translation | Book | Chapter */}
+      <div className="step-bible-selector" ref={translationDropdownRef}>
+        <div className="selector-group">
+          <button
+            type="button"
+            className="selector-btn translation-selector"
+            onClick={() => setShowTranslationDropdown(!showTranslationDropdown)}
+            aria-expanded={showTranslationDropdown}
+            aria-haspopup="true"
+            aria-label="Select translation"
+            disabled={loading}
+          >
+            {bibles.find(b => b.id === selectedBibleId)?.abbreviation || 'Loading...'}
+          </button>
+          <span className="selector-divider">|</span>
+          <button 
+            type="button" 
+            className="selector-btn book-selector"
+            aria-label="Select book"
+            disabled={loading}
+          >
+            {books.find(b => b.id === selectedBookId)?.name || 'Genesis'}
+          </button>
+          <span className="selector-divider">|</span>
+          <button 
+            type="button" 
+            className="selector-btn chapter-selector"
+            aria-label="Select chapter"
+            disabled={loading}
+          >
+            {chapters.find(c => c.id === selectedChapterId)?.number || 'Loading...'}
+          </button>
         </div>
-      </nav>
+        
+        {showTranslationDropdown && (
+          <div className="step-translation-dropdown">
+            {loading ? (
+              <div className="step-translation-item">Loading translations...</div>
+            ) : error ? (
+              <div className="step-translation-item error">{error}</div>
+            ) : (
+              bibles.map((bible) => (
+                <button
+                  key={bible.id}
+                  type="button"
+                  className={`step-translation-item ${selectedBibleId === bible.id ? "is-active" : ""}`}
+                  onClick={() => {
+                    selectBible(bible.id);
+                    setShowTranslationDropdown(false);
+                  }}
+                >
+                  <span className="trans-abbr">{bible.abbreviation}</span>
+                  <span className="trans-full">{bible.name}</span>
+                </button>
+              ))
+            )}
+          </div>
+        )}
+      </div>
 
       <div className={`experience-layout ${isStudy ? "study-layout" : "reading-layout is-reading-only"}`}>
-        <section className="reading-column" aria-label="Chapter text">
-          <div className={`verse-list ${surface}`}>
-            {genesis2Chapter.verses.map((verse) => {
+        <section className="reading-column" aria-label="Chapter text" ref={readingColumnRef}>
+          {/* Chapter title embedded naturally in the text */}
+          <div className="chapter-title-embedded">
+            <h1 className="chapter-heading">
+              {books.find(b => b.id === selectedBookId)?.name || 'Genesis'}{' '}
+              {chapters.find(c => c.id === selectedChapterId)?.number || '2'}
+            </h1>
+          </div>
+
+          {/* Floating mode switcher - appears on top of text, minimal and intuitive */}
+          <nav className="mode-switcher-floating" aria-label="Switch reading mode">
+            <Link 
+              href="/genesis-2/reading" 
+              className={`mode-btn ${!isStudy ? "active" : ""}`}
+              title="Reading Mode"
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <path d="M3 3h10M3 8h10M3 13h7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+              </svg>
+            </Link>
+            <Link 
+              href="/genesis-2/study" 
+              className={`mode-btn ${isStudy ? "active" : ""}`}
+              title="Study Manuscript Mode"
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <path d="M11 2L5 14M9 2L6 9" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+                <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.2"/>
+              </svg>
+            </Link>
+          </nav>
+          
+          <div className={`verse-list ${surface} ${isAnnotating ? 'is-annotating' : ''}`} style={{ position: "relative" }}>
+            {isStudy && (
+              <SVGDrawingLayer
+                isActive={isStudy}
+                currentTool={toolMode}
+                currentColor={underlineColor}
+                onStrokesChange={setSvgStrokes}
+                initialStrokes={svgStrokes}
+              />
+            )}
+            
+            {loading && (
+              <div style={{ padding: "2rem", textAlign: "center", color: "#666" }}>
+                Loading chapter...
+              </div>
+            )}
+            
+            {error && (
+              <div style={{ padding: "2rem", textAlign: "center", color: "#ff2d55" }}>
+                Error loading chapter: {error}
+              </div>
+            )}
+            
+            {!loading && !error && chapterContent && chapterContent.verses.map((verse) => {
               const annotation = annotations[verse.number] ?? {};
               const isSelected = selectedVerse === verse.number;
 
               return (
                 <article
-                  key={verse.number}
+                  key={verse.id}
                   className={[
                     "verse-card",
                     isSelected ? "is-selected" : "",
@@ -372,75 +642,82 @@ export function GenesisExperience({ surface }: { surface: SurfaceMode }) {
 
         {isStudy ? (
           <>
-            <div
-              ref={toolbarRef}
-              className="floating-annotation-panel"
-              style={{
-                left: `${toolbarPosition.x}px`,
-                top: `${toolbarPosition.y}px`,
-                cursor: isDragging ? "grabbing" : "grab",
-              }}
-            >
-              <div
-                className="floating-panel-handle"
-                onMouseDown={handleMouseDown}
+            {/* Excalibur-style minimalist annotation toolbar - top right corner, fixed */}
+            <div className="annotation-toolbar-excalibur">
+              {/* Tool icons */}
+              <button
+                type="button"
+                className={`tool-btn ${toolMode === "pen" ? "active" : ""}`}
+                onClick={() => setToolMode("pen")}
+                aria-label="Pen"
+                title="Pen"
               >
-                <span className="drag-indicator">⋮⋮</span>
-                <span className="panel-title">Annotation Tools</span>
-              </div>
-              <div className="floating-panel-content">
-                <div className="annotation-toolbar">
-                  <button
-                    type="button"
-                    className={toolEnabled && toolMode === "pen" ? "pen-tool is-active" : "pen-tool"}
-                    onClick={() => {
-                      setToolMode("pen");
-                      setToolEnabled(true);
-                    }}
-                    aria-pressed={toolEnabled && toolMode === "pen"}
-                  >
-                    ✒️ Stilo
-                  </button>
-                  <button
-                    type="button"
-                    className={toolEnabled && toolMode === "marker" ? "pen-tool is-active" : "pen-tool"}
-                    onClick={() => {
-                      setToolMode("marker");
-                      setToolEnabled(true);
-                    }}
-                    aria-pressed={toolEnabled && toolMode === "marker"}
-                  >
-                    🖍️ Marker
-                  </button>
-                </div>
-
-                <div className="color-picker" role="group" aria-label="Choose annotation color">
-                  <span>Color</span>
-                  <div className="color-picker__swatches color-picker__swatches--bright">
-                    {UNDERLINE_COLORS.map((color) => (
-                      <button
-                        key={color}
-                        type="button"
-                        className={underlineColor === color ? "is-active" : ""}
-                        onClick={() => setUnderlineColor(color)}
-                        style={{ backgroundColor: color }}
-                        aria-label={`Use ${color}`}
-                      />
-                    ))}
-                  </div>
-                </div>
-
-                <div className="annotation-actions">
-                  <button type="button" onClick={() => setToolEnabled((current) => !current)}>
-                    {toolEnabled ? "Tool off" : "Tool on"}
-                  </button>
-                </div>
-              </div>
+                <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                  <path d="M13 2L5 16" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                </svg>
+              </button>
+              
+              <button
+                type="button"
+                className={`tool-btn ${toolMode === "marker" ? "active" : ""}`}
+                onClick={() => setToolMode("marker")}
+                aria-label="Marker"
+                title="Marker"
+              >
+                <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                  <rect x="2" y="8" width="14" height="3" rx="0.5" fill="currentColor" opacity="0.4"/>
+                </svg>
+              </button>
+              
+              <button
+                type="button"
+                className={`tool-btn ${toolMode === "eraser" ? "active" : ""}`}
+                onClick={() => setToolMode("eraser")}
+                aria-label="Eraser"
+                title="Eraser"
+              >
+                <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                  <path d="M7 16H16M2 10L7 15L16 6L11 1L2 10Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </button>
+              
+              <div className="divider"></div>
+              
+              {/* Color dots - main 5 colors */}
+              {toolMode !== "eraser" && MAIN_COLORS.map((color) => (
+                <button
+                  key={color}
+                  type="button"
+                  className={`color-dot ${underlineColor === color ? "active" : ""}`}
+                  onClick={() => setUnderlineColor(color)}
+                  style={{ backgroundColor: color }}
+                  aria-label={`Color ${color}`}
+                />
+              ))}
             </div>
 
-            <aside className="inspector-column">
-              <MeaningExplorer target={meaningTargetMap[selectedMeaning]} />
-            </aside>
+            {showMeaningModal && (
+              <div className="meaning-modal-overlay" onClick={() => !meaningModalPinned && setShowMeaningModal(false)}>
+                <div className="meaning-modal" onClick={(e) => e.stopPropagation()}>
+                  <div className="meaning-modal-header">
+                    <button 
+                      className={`pin-button ${meaningModalPinned ? 'is-pinned' : ''}`}
+                      onClick={() => setMeaningModalPinned(!meaningModalPinned)}
+                      title={meaningModalPinned ? "Unpin" : "Pin to keep open"}
+                    >
+                      📌
+                    </button>
+                    <button 
+                      className="close-button"
+                      onClick={() => setShowMeaningModal(false)}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  <MeaningExplorer target={meaningTargetMap[selectedMeaning]} />
+                </div>
+              </div>
+            )}
           </>
         ) : null}
       </div>

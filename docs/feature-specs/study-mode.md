@@ -21,10 +21,10 @@ Study Mode transforms Bible reading into an active workspace for annotation, ref
 - Optimize the display for markups and notes
 
 ### Annotation Types
-- highlight
-- underline
-- note
-- optional future freeform writing layer
+- highlight (word-based or marker tool)
+- underline (word-based or pen tool)
+- note (typed or handwritten)
+- freehand drawing (SVG-based pen/marker strokes for natural manuscript annotation)
 
 ### Note Attachment
 Notes should be attachable to:

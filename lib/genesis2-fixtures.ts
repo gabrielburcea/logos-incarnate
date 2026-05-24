@@ -41,7 +41,7 @@ export type MeaningTarget = {
 
 export const genesis2Chapter = {
   title: "Genesis 2",
-  translation: "KJV (public domain)",
+  translation: "kjv",
   summary:
     "A calm first reading surface for creation, vocation, companionship, covenant, and unashamed intimacy.",
   verses: [

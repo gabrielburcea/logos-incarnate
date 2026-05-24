@@ -175,11 +175,12 @@ The reading/study manuscript experience should support multiple annotation layer
 - notes anchored to verses or word ranges
 - margin notes that remain visible in context
 
-### 3. Canvas Overlay Layer
-- arrows
-- connectors
-- visual markings
-- relational markings between words or phrases
+### 3. SVG Drawing Layer
+- freehand pen strokes for underlining, circling, bracketing
+- arrows connecting related concepts
+- visual connectors between words or phrases
+- all annotations stored as scalable vector paths
+- enables future animation and AI-driven storytelling integration
 
 ## Product Modes
 
