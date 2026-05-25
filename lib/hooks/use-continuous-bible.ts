@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
-import { bibleAPI, BibleVersion, Book, ChapterContent, BIBLE_VERSIONS } from '../services/bible-api';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { bibleAPI, BibleVersion, Book, Chapter, BIBLE_VERSIONS } from '../services/bible-api';
 
 export interface LoadedChapter {
   id: string;
@@ -14,160 +14,369 @@ export function useContinuousBible() {
   const [bibles, setBibles] = useState<BibleVersion[]>([]);
   const [selectedBibleId, setSelectedBibleId] = useState<string>(BIBLE_VERSIONS.KJV);
   const [books, setBooks] = useState<Book[]>([]);
+  const [selectedBookId, setSelectedBookId] = useState<string>('GEN');
+  const [chapters, setChapters] = useState<Chapter[]>([]);
+  const [selectedChapterId, setSelectedChapterId] = useState<string>('');
   const [loadedChapters, setLoadedChapters] = useState<LoadedChapter[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [hasMore, setHasMore] = useState(true);
-  const [currentBookIndex, setCurrentBookIndex] = useState(0);
-  const [currentChapterIndex, setCurrentChapterIndex] = useState(0);
+  const [hasMoreNext, setHasMoreNext] = useState(true);
+  const [hasMorePrevious, setHasMorePrevious] = useState(false);
+  const [pendingScrollTo, setPendingScrollTo] = useState<string | null>(null);
 
+  // Forward/backward iteration cursors: (book index in `books`, chapter index in that book's filtered chapter list).
+  // `head` = index of the FIRST loaded chapter; `tail` = index of the LAST loaded chapter.
+  const headRef = useRef<{ bookIdx: number; chapterIdx: number }>({ bookIdx: 0, chapterIdx: 0 });
+  const tailRef = useRef<{ bookIdx: number; chapterIdx: number }>({ bookIdx: 0, chapterIdx: 0 });
+  const chaptersCacheRef = useRef<Map<string, Chapter[]>>(new Map());
+  const inFlightRef = useRef(false);
+  const initializedRef = useRef(false);
+  const booksRef = useRef<Book[]>([]);
+  booksRef.current = books;
+
+  // ----- Initial load: bibles -----
   useEffect(() => {
-    loadBibles();
+    (async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await bibleAPI.getBibles();
+        const selectedBibles = data.filter(
+          (b) => b.id === BIBLE_VERSIONS.KJV || b.id === BIBLE_VERSIONS.NIV
+        );
+        setBibles(selectedBibles);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load bibles');
+      } finally {
+        setLoading(false);
+      }
+    })();
   }, []);
 
+  // ----- Load books whenever bible changes -----
   useEffect(() => {
-    if (selectedBibleId) {
-      loadBooks(selectedBibleId);
-    }
+    if (!selectedBibleId) return;
+    (async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        chaptersCacheRef.current.clear();
+        const data = await bibleAPI.getBooks(selectedBibleId);
+        setBooks(data);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load books');
+      } finally {
+        setLoading(false);
+      }
+    })();
   }, [selectedBibleId]);
 
-  useEffect(() => {
-    if (selectedBibleId && books.length > 0) {
-      // Start loading from Genesis
-      setLoadedChapters([]);
-      setCurrentBookIndex(0);
-      setCurrentChapterIndex(0);
-      setHasMore(true);
-      loadNextChapters(3); // Load first 3 chapters
-    }
-  }, [selectedBibleId, books]);
+  // ----- Helpers -----
+  const getCachedChapters = useCallback(
+    async (bibleId: string, bookId: string): Promise<Chapter[]> => {
+      const key = `${bibleId}:${bookId}`;
+      const cached = chaptersCacheRef.current.get(key);
+      if (cached) return cached;
+      const data = await bibleAPI.getChapters(bibleId, bookId);
+      const filtered = data.filter((ch) => ch.number !== 'intro');
+      chaptersCacheRef.current.set(key, filtered);
+      return filtered;
+    },
+    []
+  );
 
-  const loadBibles = async () => {
-    try {
+  const fetchChapter = useCallback(
+    async (bibleId: string, book: Book, chapter: Chapter): Promise<LoadedChapter> => {
+      const content = await bibleAPI.getChapter(bibleId, chapter.id);
+      let finalContent = content.content;
+      // Prepend the book intro to chapter 1 (if it exists).
+      if (chapter.number === '1') {
+        try {
+          const intro = await bibleAPI.getChapter(bibleId, `${book.id}.intro`);
+          finalContent = intro.content + content.content;
+        } catch {
+          // No intro available — fine.
+        }
+      }
+      return {
+        id: chapter.id,
+        bookId: book.id,
+        bookName: book.name.endsWith('.') ? book.nameLong : book.name,
+        chapterNumber: chapter.number,
+        content: finalContent,
+        reference: chapter.reference,
+      };
+    },
+    []
+  );
+
+  // ----- Load chapters AFTER the current tail -----
+  const loadNextChapters = useCallback(
+    async (count: number = 1) => {
+      const currentBooks = booksRef.current;
+      if (!selectedBibleId || currentBooks.length === 0) return;
+      if (inFlightRef.current || !hasMoreNext) return;
+
+      inFlightRef.current = true;
       setLoading(true);
       setError(null);
-      const data = await bibleAPI.getBibles();
-      const selectedBibles = data.filter(bible => 
-        bible.id === BIBLE_VERSIONS.KJV || bible.id === BIBLE_VERSIONS.NIV
-      );
-      setBibles(selectedBibles);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load bibles');
-    } finally {
-      setLoading(false);
-    }
-  };
 
-  const loadBooks = async (bibleId: string) => {
-    try {
-      setLoading(true);
-      setError(null);
-      const data = await bibleAPI.getBooks(bibleId);
-      setBooks(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load books');
-    } finally {
-      setLoading(false);
-    }
-  };
+      try {
+        const newChapters: LoadedChapter[] = [];
+        let { bookIdx, chapterIdx } = tailRef.current;
+        let reachedEnd = false;
 
-  const loadNextChapters = useCallback(async (count: number = 1) => {
-    if (!selectedBibleId || books.length === 0 || loading || !hasMore) {
-      return;
-    }
+        for (let i = 0; i < count; i++) {
+          let nextBook = bookIdx;
+          let nextChapter = chapterIdx + 1;
+          let chapList = await getCachedChapters(selectedBibleId, currentBooks[nextBook].id);
 
-    setLoading(true);
-    setError(null);
-
-    try {
-      const chaptersToLoad: LoadedChapter[] = [];
-      let bookIdx = currentBookIndex;
-      let chapterIdx = currentChapterIndex;
-
-      for (let i = 0; i < count; i++) {
-        if (bookIdx >= books.length) {
-          setHasMore(false);
-          break;
-        }
-
-        const book = books[bookIdx];
-        
-        // Get chapters for this book
-        const chapters = await bibleAPI.getChapters(selectedBibleId, book.id);
-        const filteredChapters = chapters.filter(ch => ch.number !== 'intro');
-
-        if (chapterIdx >= filteredChapters.length) {
-          // Move to next book
-          bookIdx++;
-          chapterIdx = 0;
-          continue;
-        }
-
-        const chapter = filteredChapters[chapterIdx];
-        
-        // Load chapter content
-        const content = await bibleAPI.getChapter(selectedBibleId, chapter.id);
-        
-        // For first chapter of each book, try to load intro
-        let finalContent = content.content;
-        if (chapterIdx === 0) {
-          try {
-            const introChapterId = `${book.id}.intro`;
-            const intro = await bibleAPI.getChapter(selectedBibleId, introChapterId);
-            finalContent = intro.content + content.content;
-          } catch {
-            // No intro, that's fine
+          // Roll over into the next book(s) if needed.
+          while (nextChapter >= chapList.length) {
+            nextBook++;
+            nextChapter = 0;
+            if (nextBook >= currentBooks.length) {
+              reachedEnd = true;
+              break;
+            }
+            chapList = await getCachedChapters(selectedBibleId, currentBooks[nextBook].id);
           }
+          if (reachedEnd) break;
+
+          const book = currentBooks[nextBook];
+          const chapter = chapList[nextChapter];
+          const loaded = await fetchChapter(selectedBibleId, book, chapter);
+          newChapters.push(loaded);
+          bookIdx = nextBook;
+          chapterIdx = nextChapter;
         }
 
-        chaptersToLoad.push({
-          id: chapter.id,
-          bookId: book.id,
-          bookName: book.name.endsWith('.') ? book.nameLong : book.name,
-          chapterNumber: chapter.number,
-          content: finalContent,
-          reference: chapter.reference,
-        });
-
-        // Move to next chapter
-        chapterIdx++;
-        if (chapterIdx >= filteredChapters.length) {
-          bookIdx++;
-          chapterIdx = 0;
+        tailRef.current = { bookIdx, chapterIdx };
+        if (newChapters.length > 0) {
+          setLoadedChapters((prev) => [...prev, ...newChapters]);
         }
+        if (reachedEnd) setHasMoreNext(false);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load chapters');
+      } finally {
+        inFlightRef.current = false;
+        setLoading(false);
       }
+    },
+    [selectedBibleId, hasMoreNext, getCachedChapters, fetchChapter]
+  );
 
-      setLoadedChapters(prev => [...prev, ...chaptersToLoad]);
-      setCurrentBookIndex(bookIdx);
-      setCurrentChapterIndex(chapterIdx);
+  // ----- Load chapters BEFORE the current head -----
+  const loadPreviousChapters = useCallback(
+    async (count: number = 1) => {
+      const currentBooks = booksRef.current;
+      if (!selectedBibleId || currentBooks.length === 0) return;
+      if (inFlightRef.current || !hasMorePrevious) return;
 
-      if (bookIdx >= books.length) {
-        setHasMore(false);
+      inFlightRef.current = true;
+      setLoading(true);
+      setError(null);
+
+      try {
+        const newChapters: LoadedChapter[] = [];
+        let { bookIdx, chapterIdx } = headRef.current;
+        let reachedStart = false;
+
+        for (let i = 0; i < count; i++) {
+          let prevBook = bookIdx;
+          let prevChapter = chapterIdx - 1;
+
+          while (prevChapter < 0) {
+            prevBook--;
+            if (prevBook < 0) {
+              reachedStart = true;
+              break;
+            }
+            const chapList = await getCachedChapters(selectedBibleId, currentBooks[prevBook].id);
+            prevChapter = chapList.length - 1;
+          }
+          if (reachedStart) break;
+
+          const book = currentBooks[prevBook];
+          const chapList = await getCachedChapters(selectedBibleId, book.id);
+          const chapter = chapList[prevChapter];
+          const loaded = await fetchChapter(selectedBibleId, book, chapter);
+          newChapters.unshift(loaded);
+          bookIdx = prevBook;
+          chapterIdx = prevChapter;
+        }
+
+        headRef.current = { bookIdx, chapterIdx };
+        if (newChapters.length > 0) {
+          setLoadedChapters((prev) => [...newChapters, ...prev]);
+        }
+        if (reachedStart || (bookIdx === 0 && chapterIdx === 0)) {
+          setHasMorePrevious(false);
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load chapters');
+      } finally {
+        inFlightRef.current = false;
+        setLoading(false);
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load chapters');
-    } finally {
-      setLoading(false);
-    }
-  }, [selectedBibleId, books, currentBookIndex, currentChapterIndex, loading, hasMore]);
+    },
+    [selectedBibleId, hasMorePrevious, getCachedChapters, fetchChapter]
+  );
 
-  const selectBible = (bibleId: string) => {
+  // ----- Jump directly to a specific chapter (replaces the loaded buffer) -----
+  const jumpToChapter = useCallback(
+    async (bookId: string, chapterId: string) => {
+      const currentBooks = booksRef.current;
+      if (!selectedBibleId || currentBooks.length === 0) return;
+      const bookIdx = currentBooks.findIndex((b) => b.id === bookId);
+      if (bookIdx < 0) return;
+      if (inFlightRef.current) return;
+
+      inFlightRef.current = true;
+      setLoading(true);
+      setError(null);
+
+      try {
+        const book = currentBooks[bookIdx];
+        const chapList = await getCachedChapters(selectedBibleId, bookId);
+        const chapterIdx = chapList.findIndex((c) => c.id === chapterId);
+        if (chapterIdx < 0) return;
+        const chapter = chapList[chapterIdx];
+        const loaded = await fetchChapter(selectedBibleId, book, chapter);
+
+        setLoadedChapters([loaded]);
+        setChapters(chapList);
+        setSelectedBookId(bookId);
+        setSelectedChapterId(chapterId);
+        headRef.current = { bookIdx, chapterIdx };
+        tailRef.current = { bookIdx, chapterIdx };
+
+        const isLastBook = bookIdx === currentBooks.length - 1;
+        const isLastChapter = chapterIdx === chapList.length - 1;
+        setHasMoreNext(!(isLastBook && isLastChapter));
+        setHasMorePrevious(!(bookIdx === 0 && chapterIdx === 0));
+        setPendingScrollTo(chapter.id);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load chapter');
+      } finally {
+        inFlightRef.current = false;
+        setLoading(false);
+      }
+    },
+    [selectedBibleId, getCachedChapters, fetchChapter]
+  );
+
+  // ----- Initial position: Genesis 1 once books are ready -----
+  useEffect(() => {
+    if (!selectedBibleId || books.length === 0) return;
+    if (initializedRef.current) return;
+    initializedRef.current = true;
+
+    (async () => {
+      const gen = books.find((b) => b.id === 'GEN') || books[0];
+      try {
+        const chapList = await getCachedChapters(selectedBibleId, gen.id);
+        if (chapList.length === 0) return;
+        await jumpToChapter(gen.id, chapList[0].id);
+        // Preload the next couple of chapters so the user has runway to scroll.
+        await loadNextChapters(2);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to initialize');
+      }
+    })();
+  }, [selectedBibleId, books, jumpToChapter, loadNextChapters, getCachedChapters]);
+
+  // ----- Keep the dropdown `chapters` list in sync with the selected book -----
+  useEffect(() => {
+    if (!selectedBibleId || !selectedBookId || books.length === 0) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const list = await getCachedChapters(selectedBibleId, selectedBookId);
+        if (!cancelled) setChapters(list);
+      } catch {
+        /* handled elsewhere */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedBibleId, selectedBookId, books.length, getCachedChapters]);
+
+  // ----- Public selector actions -----
+  const selectBible = useCallback((bibleId: string) => {
+    initializedRef.current = false;
     setSelectedBibleId(bibleId);
     setLoadedChapters([]);
-    setCurrentBookIndex(0);
-    setCurrentChapterIndex(0);
-    setHasMore(true);
-  };
+    setChapters([]);
+    setSelectedChapterId('');
+    setHasMoreNext(true);
+    setHasMorePrevious(false);
+    headRef.current = { bookIdx: 0, chapterIdx: 0 };
+    tailRef.current = { bookIdx: 0, chapterIdx: 0 };
+  }, []);
+
+  const selectBook = useCallback(
+    async (bookId: string) => {
+      if (!selectedBibleId) return;
+      try {
+        const list = await getCachedChapters(selectedBibleId, bookId);
+        if (list.length === 0) return;
+        await jumpToChapter(bookId, list[0].id);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load book');
+      }
+    },
+    [selectedBibleId, getCachedChapters, jumpToChapter]
+  );
+
+  const selectChapter = useCallback(
+    async (chapterId: string) => {
+      await jumpToChapter(selectedBookId, chapterId);
+    },
+    [selectedBookId, jumpToChapter]
+  );
+
+  // ----- Silent sync from scroll observer (no reload, just updates selector state) -----
+  const setVisibleChapter = useCallback(
+    (bookId: string, chapterId: string) => {
+      setSelectedBookId((prev) => {
+        if (prev !== bookId && selectedBibleId) {
+          // Refresh the chapters list for the dropdown (uses cache).
+          getCachedChapters(selectedBibleId, bookId)
+            .then((list) => setChapters(list))
+            .catch(() => {});
+        }
+        return bookId;
+      });
+      setSelectedChapterId(chapterId);
+    },
+    [selectedBibleId, getCachedChapters]
+  );
+
+  const clearPendingScroll = useCallback(() => setPendingScrollTo(null), []);
 
   return {
     bibles,
     selectedBibleId,
     books,
+    selectedBookId,
+    chapters,
+    selectedChapterId,
     loadedChapters,
     loading,
     error,
-    hasMore,
+    hasMore: hasMoreNext, // backward-compat alias
+    hasMoreNext,
+    hasMorePrevious,
+    pendingScrollTo,
     selectBible,
+    selectBook,
+    selectChapter,
+    jumpToChapter,
     loadNextChapters,
+    loadPreviousChapters,
+    setVisibleChapter,
+    clearPendingScroll,
   };
 }

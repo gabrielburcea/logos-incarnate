@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useLayoutEffect, useRef } from "react";
 import Link from "next/link";
 import { useContinuousBible } from "@/lib/hooks/use-continuous-bible";
 
@@ -8,54 +8,134 @@ export function ContinuousReadingExperience() {
   const {
     bibles,
     selectedBibleId,
+    books,
+    selectedBookId,
+    chapters,
+    selectedChapterId,
     loadedChapters,
     loading,
     error,
-    hasMore,
+    hasMoreNext,
+    hasMorePrevious,
+    pendingScrollTo,
     selectBible,
+    selectBook,
+    selectChapter,
     loadNextChapters,
+    loadPreviousChapters,
+    setVisibleChapter,
+    clearPendingScroll,
   } = useContinuousBible();
 
   const [showTranslationDropdown, setShowTranslationDropdown] = React.useState(false);
+  const [showBookDropdown, setShowBookDropdown] = React.useState(false);
+  const [showChapterDropdown, setShowChapterDropdown] = React.useState(false);
+
   const dropdownRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const loadingRef = useRef(false);
+  const chapterRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const loadingNextRef = useRef(false);
+  const loadingPrevRef = useRef(false);
+  const prevScrollHeightRef = useRef<number | null>(null);
 
-  // Close dropdown when clicking outside
+  // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
         setShowTranslationDropdown(false);
+        setShowBookDropdown(false);
+        setShowChapterDropdown(false);
       }
     };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
-    if (showTranslationDropdown) {
-      document.addEventListener("mousedown", handleClickOutside);
-      return () => document.removeEventListener("mousedown", handleClickOutside);
-    }
-  }, [showTranslationDropdown]);
-
-  // Infinite scroll handler
+  // Infinite scroll — load next when near the bottom, previous when near the top
   useEffect(() => {
-    const scrollContainer = scrollContainerRef.current;
-    if (!scrollContainer) return;
+    const el = scrollContainerRef.current;
+    if (!el) return;
 
     const handleScroll = () => {
-      const { scrollTop, scrollHeight, clientHeight } = scrollContainer;
-      const scrollPercentage = (scrollTop + clientHeight) / scrollHeight;
+      const { scrollTop, scrollHeight, clientHeight } = el;
+      const distFromBottom = scrollHeight - (scrollTop + clientHeight);
 
-      // Load more when user scrolls to 80% of content
-      if (scrollPercentage > 0.8 && hasMore && !loading && !loadingRef.current) {
-        loadingRef.current = true;
+      if (distFromBottom < clientHeight * 0.5 && hasMoreNext && !loadingNextRef.current) {
+        loadingNextRef.current = true;
         loadNextChapters(2).finally(() => {
-          loadingRef.current = false;
+          loadingNextRef.current = false;
+        });
+      }
+
+      if (scrollTop < clientHeight * 0.5 && hasMorePrevious && !loadingPrevRef.current) {
+        loadingPrevRef.current = true;
+        // Save the scroll height so we can preserve scroll position after prepending.
+        prevScrollHeightRef.current = el.scrollHeight;
+        loadPreviousChapters(2).finally(() => {
+          loadingPrevRef.current = false;
         });
       }
     };
 
-    scrollContainer.addEventListener('scroll', handleScroll);
-    return () => scrollContainer.removeEventListener('scroll', handleScroll);
-  }, [hasMore, loading, loadNextChapters]);
+    el.addEventListener("scroll", handleScroll, { passive: true });
+    return () => el.removeEventListener("scroll", handleScroll);
+  }, [hasMoreNext, hasMorePrevious, loadNextChapters, loadPreviousChapters]);
+
+  // Preserve scroll position after prepending chapters at the top
+  useLayoutEffect(() => {
+    const el = scrollContainerRef.current;
+    if (!el || prevScrollHeightRef.current == null) return;
+    const delta = el.scrollHeight - prevScrollHeightRef.current;
+    if (delta > 0) el.scrollTop += delta;
+    prevScrollHeightRef.current = null;
+  }, [loadedChapters]);
+
+  // Scroll to the requested chapter after a manual jump
+  useLayoutEffect(() => {
+    if (!pendingScrollTo) return;
+    const target = chapterRefs.current.get(pendingScrollTo);
+    if (target) {
+      target.scrollIntoView({ behavior: "auto", block: "start" });
+      clearPendingScroll();
+    }
+  }, [pendingScrollTo, loadedChapters, clearPendingScroll]);
+
+  // Observe the currently visible chapter to keep selectors in sync with scrolling
+  useEffect(() => {
+    const root = scrollContainerRef.current;
+    if (!root || loadedChapters.length === 0) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        // Pick the visible entry closest to the top of the viewport.
+        const visible = entries
+          .filter((e) => e.isIntersecting)
+          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
+        if (!visible) return;
+        const el = visible.target as HTMLElement;
+        const bookId = el.dataset.bookId;
+        const chapterId = el.dataset.chapterId;
+        if (bookId && chapterId) setVisibleChapter(bookId, chapterId);
+      },
+      {
+        root,
+        // Trigger when the chapter heading is near the top of the viewport.
+        rootMargin: "0px 0px -70% 0px",
+        threshold: 0,
+      }
+    );
+
+    chapterRefs.current.forEach((el) => observer.observe(el));
+    return () => observer.disconnect();
+  }, [loadedChapters, setVisibleChapter]);
+
+  const registerChapterRef = (id: string) => (el: HTMLDivElement | null) => {
+    if (el) chapterRefs.current.set(id, el);
+    else chapterRefs.current.delete(id);
+  };
+
+  const currentBook = books.find((b) => b.id === selectedBookId);
+  const currentChapter = chapters.find((c) => c.id === selectedChapterId);
 
   return (
     <main className="experience-shell experience-shell--reading">
@@ -63,30 +143,70 @@ export function ContinuousReadingExperience() {
       <div className="frozen-header-bar">
         {/* Left: Back arrow */}
         <Link className="header-back-link" href="/" title="Back to home">
-          ← 
+          ←
         </Link>
 
-        {/* Center: Translation selector only */}
+        {/* Center-left: Translation | Book | Chapter selectors */}
         <div className="header-bible-selector" ref={dropdownRef}>
           <div className="selector-group">
             <button
               type="button"
               className="selector-btn translation-selector"
-              onClick={() => setShowTranslationDropdown(!showTranslationDropdown)}
+              onClick={() => {
+                setShowTranslationDropdown((v) => !v);
+                setShowBookDropdown(false);
+                setShowChapterDropdown(false);
+              }}
               aria-expanded={showTranslationDropdown}
               aria-haspopup="true"
               aria-label="Select translation"
-              disabled={loading}
+              disabled={bibles.length === 0}
             >
-              {bibles.find(b => b.id === selectedBibleId)?.abbreviation || 'Loading...'}
+              {bibles.find((b) => b.id === selectedBibleId)?.abbreviation || "Loading..."}
+            </button>
+            <span className="selector-divider">|</span>
+            <button
+              type="button"
+              className="selector-btn book-selector"
+              onClick={() => {
+                setShowBookDropdown((v) => !v);
+                setShowTranslationDropdown(false);
+                setShowChapterDropdown(false);
+              }}
+              aria-expanded={showBookDropdown}
+              aria-haspopup="true"
+              aria-label="Select book"
+              disabled={books.length === 0}
+            >
+              {currentBook
+                ? currentBook.name.endsWith(".")
+                  ? currentBook.nameLong
+                  : currentBook.name
+                : "Loading..."}
+            </button>
+            <span className="selector-divider">|</span>
+            <button
+              type="button"
+              className="selector-btn chapter-selector"
+              onClick={() => {
+                setShowChapterDropdown((v) => !v);
+                setShowTranslationDropdown(false);
+                setShowBookDropdown(false);
+              }}
+              aria-expanded={showChapterDropdown}
+              aria-haspopup="true"
+              aria-label="Select chapter"
+              disabled={chapters.length === 0}
+            >
+              {currentChapter?.number || "…"}
             </button>
           </div>
-          
+
           {showTranslationDropdown && (
             <div className="step-translation-dropdown">
-              {loading ? (
+              {bibles.length === 0 ? (
                 <div className="step-translation-item">Loading translations...</div>
-              ) : error ? (
+              ) : error && bibles.length === 0 ? (
                 <div className="step-translation-item error">{error}</div>
               ) : (
                 bibles.map((bible) => (
@@ -106,33 +226,69 @@ export function ContinuousReadingExperience() {
               )}
             </div>
           )}
+
+          {showBookDropdown && (
+            <div className="step-translation-dropdown">
+              {books.length === 0 ? (
+                <div className="step-translation-item">Loading books...</div>
+              ) : (
+                books.map((book) => (
+                  <button
+                    key={book.id}
+                    type="button"
+                    className={`step-translation-item ${selectedBookId === book.id ? "is-active" : ""}`}
+                    onClick={() => {
+                      selectBook(book.id);
+                      setShowBookDropdown(false);
+                    }}
+                  >
+                    {book.name.endsWith(".") ? book.nameLong : book.name}
+                  </button>
+                ))
+              )}
+            </div>
+          )}
+
+          {showChapterDropdown && (
+            <div className="step-translation-dropdown">
+              {chapters.length === 0 ? (
+                <div className="step-translation-item">Loading chapters...</div>
+              ) : (
+                chapters.map((chapter) => (
+                  <button
+                    key={chapter.id}
+                    type="button"
+                    className={`step-translation-item ${selectedChapterId === chapter.id ? "is-active" : ""}`}
+                    onClick={() => {
+                      selectChapter(chapter.id);
+                      setShowChapterDropdown(false);
+                    }}
+                  >
+                    {chapter.number}
+                  </button>
+                ))
+              )}
+            </div>
+          )}
         </div>
-        
-        {/* Center: Reading Mode / Study Mode toggle */}
+
+        {/* Reading Mode / Study Mode toggle */}
         <nav className="header-mode-switcher" aria-label="Switch reading mode">
-          <Link 
-            href="/read" 
-            className="mode-btn active"
-            title="Reading Mode"
-          >
+          <Link href="/read" className="mode-btn active" title="Reading Mode">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <path d="M3 3h10M3 8h10M3 13h7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+              <path d="M3 3h10M3 8h10M3 13h7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
             </svg>
           </Link>
-          <Link 
-            href="/study" 
-            className="mode-btn"
-            title="Study Manuscript Mode"
-          >
+          <Link href="/study" className="mode-btn" title="Study Manuscript Mode">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <path d="M11 2L5 14M9 2L6 9" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
-              <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.2"/>
+              <path d="M11 2L5 14M9 2L6 9" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+              <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.2" />
             </svg>
           </Link>
         </nav>
       </div>
 
-      {/* SCROLLABLE CONTENT ROW */}
+      {/* SCROLLABLE CONTENT */}
       <div className="scrollable-content-area" ref={scrollContainerRef}>
         <section className="reading-column" aria-label="Bible text">
           {loadedChapters.length === 0 && loading && (
@@ -140,41 +296,50 @@ export function ContinuousReadingExperience() {
               Loading chapters...
             </div>
           )}
-          
+
           {error && loadedChapters.length === 0 && (
             <div style={{ padding: "2rem", textAlign: "center", color: "#ff2d55" }}>
               Error loading content: {error}
             </div>
           )}
-          
+
+          {loading && hasMorePrevious && loadedChapters.length > 0 && (
+            <div style={{ padding: "1rem", textAlign: "center", color: "#666" }}>
+              Loading previous chapters...
+            </div>
+          )}
+
           {loadedChapters.map((chapter) => (
-            <div key={chapter.id} className="continuous-chapter">
-              {/* Chapter heading */}
+            <div
+              key={chapter.id}
+              ref={registerChapterRef(chapter.id)}
+              data-book-id={chapter.bookId}
+              data-chapter-id={chapter.id}
+              className="continuous-chapter"
+            >
               <div className="chapter-title-embedded">
                 <h1 className="chapter-heading">
                   {chapter.bookName} {chapter.chapterNumber}
                 </h1>
               </div>
-              
-              {/* Chapter content */}
               <div className="reading-mode-content">
-                <div 
+                <div
                   className="chapter-html-content"
                   dangerouslySetInnerHTML={{ __html: chapter.content }}
                 />
               </div>
             </div>
           ))}
-          
-          {loading && loadedChapters.length > 0 && (
+
+          {loading && hasMoreNext && loadedChapters.length > 0 && (
             <div style={{ padding: "2rem", textAlign: "center", color: "#666" }}>
               Loading more chapters...
             </div>
           )}
-          
-          {!hasMore && loadedChapters.length > 0 && (
+
+          {!hasMoreNext && loadedChapters.length > 0 && (
             <div style={{ padding: "3rem", textAlign: "center", color: "#999", fontStyle: "italic" }}>
-              You've reached the end of the Bible
+              You&apos;ve reached the end of the Bible
             </div>
           )}
         </section>
