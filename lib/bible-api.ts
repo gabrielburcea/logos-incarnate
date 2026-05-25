@@ -58,7 +58,7 @@ export const BIBLE_TRANSLATIONS: Record<string, BibleTranslation> = {
   // For now, we'll use KJV and WEB which are freely available
 };
 
-const API_BASE = 'https://api.scripture.api.bible/v1';
+const API_BASE = 'https://rest.api.bible/v1';
 const API_KEY = process.env.NEXT_PUBLIC_BIBLE_API_KEY || '';
 
 /**
