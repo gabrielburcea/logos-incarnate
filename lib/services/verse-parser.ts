@@ -22,15 +22,36 @@ export function parseHTMLToVerses(htmlContent: string): ParsedVerse[] {
   const doc = parser.parseFromString(htmlContent, 'text/html');
   
   const verses: ParsedVerse[] = [];
-  const verseElements = doc.querySelectorAll('.verse');
+  const verseSpans = doc.querySelectorAll('span.v[data-number]');
   
-  verseElements.forEach((verseEl, index) => {
-    const verseNumber = verseEl.querySelector('.v')?.textContent?.trim() || `${index + 1}`;
-    const verseText = verseEl.textContent?.replace(/^\d+\s*/, '').trim() || '';
+  verseSpans.forEach((verseSpan) => {
+    const verseNumber = verseSpan.getAttribute('data-number') || verseSpan.textContent?.trim() || '1';
+    const num = parseInt(verseNumber) || 1;
+    
+    // Get text after this verse marker until next verse marker
+    let verseText = '';
+    let currentNode = verseSpan.nextSibling;
+    
+    while (currentNode) {
+      // Stop at next verse marker
+      if (currentNode.nodeType === Node.ELEMENT_NODE && 
+          (currentNode as Element).classList.contains('v')) {
+        break;
+      }
+      
+      // Collect text
+      if (currentNode.nodeType === Node.TEXT_NODE) {
+        verseText += currentNode.textContent;
+      } else if (currentNode.nodeType === Node.ELEMENT_NODE) {
+        verseText += (currentNode as Element).textContent;
+      }
+      
+      currentNode = currentNode.nextSibling;
+    }
     
     verses.push({
-      number: parseInt(verseNumber) || index + 1,
-      text: verseText,
+      number: num,
+      text: verseText.trim(),
       verse: verseNumber,
     });
   });
