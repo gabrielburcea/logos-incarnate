@@ -437,13 +437,15 @@ export function BibleExperience({ surface }: { surface: SurfaceMode }) {
 
   return (
     <main className={`experience-shell ${isStudy ? "experience-shell--study" : "experience-shell--reading"}`}>
-      {/* Back link - top left corner */}
-      <Link className="back-link-minimal" href="/" title="Back to home">
-        ← 
-      </Link>
+      {/* FROZEN HEADER ROW - All controls in one sticky bar */}
+      <div className="frozen-header-bar">
+        {/* Left: Back arrow */}
+        <Link className="header-back-link" href="/" title="Back to home">
+          ← 
+        </Link>
 
-      {/* Step Bible style selector - compact horizontal layout: Translation | Book | Chapter */}
-      <div className="step-bible-selector" ref={dropdownRef}>
+        {/* Center-left: Translation | Book | Chapter selectors */}
+        <div className="header-bible-selector" ref={dropdownRef}>
         <div className="selector-group">
           <button
             type="button"
@@ -474,7 +476,12 @@ export function BibleExperience({ surface }: { surface: SurfaceMode }) {
             aria-label="Select book"
             disabled={loading}
           >
-            {books.find(b => b.id === selectedBookId)?.name || 'Loading...'}
+            {(() => {
+              const book = books.find(b => b.id === selectedBookId);
+              if (!book) return 'Loading...';
+              // Use nameLong for NIV (where name="Gen."), name for KJV (where nameLong is verbose)
+              return book.name.endsWith('.') ? book.nameLong : book.name;
+            })()}
           </button>
           <span className="selector-divider">|</span>
           <button 
@@ -536,7 +543,7 @@ export function BibleExperience({ surface }: { surface: SurfaceMode }) {
                     setShowBookDropdown(false);
                   }}
                 >
-                  {book.name}
+                  {book.name.endsWith('.') ? book.nameLong : book.name}
                 </button>
               ))
             )}
@@ -566,41 +573,103 @@ export function BibleExperience({ surface }: { surface: SurfaceMode }) {
             )}
           </div>
         )}
+        
+        {/* Center: Reading Mode / Study Manuscript toggle */}
+        <nav className="header-mode-switcher" aria-label="Switch reading mode">
+          <Link 
+            href="/read" 
+            className={`mode-btn ${!isStudy ? "active" : ""}`}
+            title="Reading Mode"
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M3 3h10M3 8h10M3 13h7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+            </svg>
+          </Link>
+          <Link 
+            href="/study" 
+            className={`mode-btn ${isStudy ? "active" : ""}`}
+            title="Study Manuscript Mode"
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M11 2L5 14M9 2L6 9" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+              <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.2"/>
+            </svg>
+          </Link>
+        </nav>
+
+        {/* Right: Annotation toolbar (only in study mode) */}
+        {isStudy && (
+          <div className="header-annotation-toolbar">
+            {/* Tool icons */}
+            <button
+              type="button"
+              className={`tool-btn ${toolMode === "pen" ? "active" : ""}`}
+              onClick={() => setToolMode("pen")}
+              aria-label="Pen"
+              title="Pen"
+            >
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                <path d="M13 2L5 16" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+              </svg>
+            </button>
+            
+            <button
+              type="button"
+              className={`tool-btn ${toolMode === "marker" ? "active" : ""}`}
+              onClick={() => setToolMode("marker")}
+              aria-label="Marker"
+              title="Marker"
+            >
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                <rect x="2" y="8" width="14" height="3" rx="0.5" fill="currentColor" opacity="0.4"/>
+              </svg>
+            </button>
+            
+            <button
+              type="button"
+              className={`tool-btn ${toolMode === "eraser" ? "active" : ""}`}
+              onClick={() => setToolMode("eraser")}
+              aria-label="Eraser"
+              title="Eraser"
+            >
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                <path d="M7 16H16M2 10L7 15L16 6L11 1L2 10Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+            
+            <div className="divider"></div>
+            
+            {/* Color dots - main 5 colors */}
+            {toolMode !== "eraser" && MAIN_COLORS.map((color) => (
+              <button
+                key={color}
+                type="button"
+                className={`color-dot ${underlineColor === color ? "active" : ""}`}
+                onClick={() => setUnderlineColor(color)}
+                style={{ backgroundColor: color }}
+                aria-label={`Color ${color}`}
+              />
+            ))}
+          </div>
+        )}
       </div>
 
-      <div className={`experience-layout ${isStudy ? "study-layout" : "reading-layout is-reading-only"}`}>
+      {/* SCROLLABLE CONTENT ROW - Full width Bible text */}
+      <div className="scrollable-content-area">
         <section className="reading-column" aria-label="Chapter text" ref={readingColumnRef}>
           {/* Chapter title embedded naturally in the text */}
           <div className="chapter-title-embedded">
             <h1 className="chapter-heading">
-              {books.find(b => b.id === selectedBookId)?.name || 'Loading...'}{' '}
-              {chapters.find(c => c.id === selectedChapterId)?.number || ''}
+              {(() => {
+                const book = books.find(b => b.id === selectedBookId);
+                if (!book) return 'Loading...';
+                const bookName = book.name.endsWith('.') ? book.nameLong : book.name;
+                const chapterNum = chapters.find(c => c.id === selectedChapterId)?.number || '';
+                return `${bookName} ${chapterNum}`;
+              })()}
             </h1>
           </div>
 
-          {/* Floating mode switcher - appears on top of text, minimal and intuitive */}
-          <nav className="mode-switcher-floating" aria-label="Switch reading mode">
-            <Link 
-              href="/read" 
-              className={`mode-btn ${!isStudy ? "active" : ""}`}
-              title="Reading Mode"
-            >
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                <path d="M3 3h10M3 8h10M3 13h7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
-              </svg>
-            </Link>
-            <Link 
-              href="/study" 
-              className={`mode-btn ${isStudy ? "active" : ""}`}
-              title="Study Manuscript Mode"
-            >
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                <path d="M11 2L5 14M9 2L6 9" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
-                <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.2"/>
-              </svg>
-            </Link>
-          </nav>
-          
           <div className={`verse-list ${surface} ${isAnnotating ? 'is-annotating' : ''}`} style={{ position: "relative" }}>
             {isStudy && (
               <SVGDrawingLayer
@@ -678,65 +747,8 @@ export function BibleExperience({ surface }: { surface: SurfaceMode }) {
             })}
           </div>
         </section>
-
-        {isStudy ? (
-          <>
-            {/* Excalibur-style minimalist annotation toolbar - top right corner, fixed */}
-            <div className="annotation-toolbar-excalibur">
-              {/* Tool icons */}
-              <button
-                type="button"
-                className={`tool-btn ${toolMode === "pen" ? "active" : ""}`}
-                onClick={() => setToolMode("pen")}
-                aria-label="Pen"
-                title="Pen"
-              >
-                <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-                  <path d="M13 2L5 16" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-                </svg>
-              </button>
-              
-              <button
-                type="button"
-                className={`tool-btn ${toolMode === "marker" ? "active" : ""}`}
-                onClick={() => setToolMode("marker")}
-                aria-label="Marker"
-                title="Marker"
-              >
-                <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-                  <rect x="2" y="8" width="14" height="3" rx="0.5" fill="currentColor" opacity="0.4"/>
-                </svg>
-              </button>
-              
-              <button
-                type="button"
-                className={`tool-btn ${toolMode === "eraser" ? "active" : ""}`}
-                onClick={() => setToolMode("eraser")}
-                aria-label="Eraser"
-                title="Eraser"
-              >
-                <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-                  <path d="M7 16H16M2 10L7 15L16 6L11 1L2 10Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </button>
-              
-              <div className="divider"></div>
-              
-              {/* Color dots - main 5 colors */}
-              {toolMode !== "eraser" && MAIN_COLORS.map((color) => (
-                <button
-                  key={color}
-                  type="button"
-                  className={`color-dot ${underlineColor === color ? "active" : ""}`}
-                  onClick={() => setUnderlineColor(color)}
-                  style={{ backgroundColor: color }}
-                  aria-label={`Color ${color}`}
-                />
-              ))}
-            </div>
-          </>
-        ) : null}
       </div>
+
     </main>
   );
 }
