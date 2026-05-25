@@ -190,7 +190,7 @@ export const bibleAPI = new BibleAPIService();
 // Popular Bible version IDs for quick access
 export const BIBLE_VERSIONS = {
   KJV: 'de4e12af7f28f599-02', // King James Version
+  NIV: '78a9f6124f344018-01', // New International Version 2011
   ASV: '06125adad2d5898a-01', // American Standard Version
   WEB: '9879dbb7cfe39e4d-01', // World English Bible
-  // Add ESV and NIV IDs once available
 };
