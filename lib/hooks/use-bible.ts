@@ -9,6 +9,7 @@ export function useBible() {
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [selectedChapterId, setSelectedChapterId] = useState<string>('');
   const [chapterContent, setChapterContent] = useState<ChapterContent | null>(null);
+  const [introContent, setIntroContent] = useState<ChapterContent | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -39,10 +40,11 @@ export function useBible() {
       setLoading(true);
       setError(null);
       const data = await bibleAPI.getBibles();
-      const englishBibles = data.filter(bible => 
-        bible.language.id === 'eng' || bible.language.name === 'English'
+      // Only show KJV and NIV
+      const selectedBibles = data.filter(bible => 
+        bible.id === BIBLE_VERSIONS.KJV || bible.id === BIBLE_VERSIONS.NIV
       );
-      setBibles(englishBibles);
+      setBibles(selectedBibles);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load bibles');
     } finally {
@@ -68,10 +70,12 @@ export function useBible() {
       setLoading(true);
       setError(null);
       const data = await bibleAPI.getChapters(bibleId, bookId);
-      setChapters(data);
+      // Filter out intro chapters from the list
+      const filteredChapters = data.filter(chapter => chapter.number !== 'intro');
+      setChapters(filteredChapters);
       
-      if (data.length > 0 && !selectedChapterId) {
-        setSelectedChapterId(data[0].id);
+      if (filteredChapters.length > 0 && !selectedChapterId) {
+        setSelectedChapterId(filteredChapters[0].id);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load chapters');
@@ -86,6 +90,21 @@ export function useBible() {
       setError(null);
       const data = await bibleAPI.getChapter(bibleId, chapterId);
       setChapterContent(data);
+      
+      // If this is chapter 1, also fetch the intro
+      const chapterNumber = data.number;
+      if (chapterNumber === '1') {
+        try {
+          const introChapterId = `${data.bookId}.intro`;
+          const intro = await bibleAPI.getChapter(bibleId, introChapterId);
+          setIntroContent(intro);
+        } catch (introErr) {
+          // Intro doesn't exist for this book, that's okay
+          setIntroContent(null);
+        }
+      } else {
+        setIntroContent(null);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load chapter');
     } finally {
@@ -104,6 +123,7 @@ export function useBible() {
     setSelectedBookId(bookId);
     setSelectedChapterId('');
     setChapterContent(null);
+    setIntroContent(null);
   };
 
   const selectChapter = (chapterId: string) => {
@@ -130,6 +150,7 @@ export function useBible() {
     chapters,
     selectedChapterId,
     chapterContent,
+    introContent,
     loading,
     error,
     selectBible,

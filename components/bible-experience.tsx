@@ -127,6 +127,7 @@ export function BibleExperience({ surface }: { surface: SurfaceMode }) {
     chapters,
     selectedChapterId,
     chapterContent,
+    introContent,
     loading,
     error,
     selectBible,
@@ -535,8 +536,7 @@ export function BibleExperience({ surface }: { surface: SurfaceMode }) {
                     setShowBookDropdown(false);
                   }}
                 >
-                  <span className="trans-abbr">{book.abbreviation}</span>
-                  <span className="trans-full">{book.name}</span>
+                  {book.name}
                 </button>
               ))
             )}
@@ -560,7 +560,7 @@ export function BibleExperience({ surface }: { surface: SurfaceMode }) {
                     setShowChapterDropdown(false);
                   }}
                 >
-                  {chapter.reference}
+                  {chapter.number}
                 </button>
               ))
             )}
@@ -624,7 +624,27 @@ export function BibleExperience({ surface }: { surface: SurfaceMode }) {
               </div>
             )}
             
-            {!loading && !error && verses.length > 0 && verses.map((verse) => {
+            {/* Reading Mode: Display raw HTML with intro */}
+            {!loading && !error && !isStudy && chapterContent && (
+              <div className="reading-mode-content">
+                {/* Show intro at top of chapter 1 */}
+                {introContent && (
+                  <div 
+                    className="chapter-intro"
+                    dangerouslySetInnerHTML={{ __html: introContent.content }}
+                  />
+                )}
+                
+                {/* Display chapter content as-is */}
+                <div 
+                  className="chapter-html-content"
+                  dangerouslySetInnerHTML={{ __html: chapterContent.content }}
+                />
+              </div>
+            )}
+            
+            {/* Study Mode: Display parsed verses for word-by-word annotation */}
+            {!loading && !error && isStudy && verses.length > 0 && verses.map((verse) => {
               const annotation = annotations[verse.number] ?? {};
               const isSelected = selectedVerse === verse.number;
 

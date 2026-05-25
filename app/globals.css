@@ -448,6 +448,52 @@ button {
   padding: 0.04em 0.14em;
 }
 
+/* Reading Mode - Raw HTML Display */
+.reading-mode-content {
+  font-size: 1.16rem;
+  line-height: 1.75;
+}
+
+.chapter-intro {
+  margin-bottom: 2rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--line);
+  font-style: italic;
+  color: var(--muted);
+  text-align: center;
+}
+
+.chapter-html-content {
+  /* API returns paragraph tags with verses */
+}
+
+.chapter-html-content p {
+  margin: 0 0 0.75rem 0;
+  text-indent: 0;
+}
+
+.chapter-html-content .v {
+  /* Verse numbers from API */
+  color: var(--accent);
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 0.75em;
+  font-weight: 700;
+  vertical-align: super;
+  line-height: 0;
+  margin-right: 0.3em;
+}
+
+.chapter-html-content .s,
+.chapter-html-content .d {
+  /* Section headings from API */
+  display: block;
+  margin: 1.5rem 0 0.75rem;
+  font-weight: 600;
+  font-size: 1.05em;
+  color: var(--ink);
+}
+
+
 .margin-note {
   margin: 0.25rem 1rem 0.75rem 3rem;
   padding: 0.9rem 1rem;
