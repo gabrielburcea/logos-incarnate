@@ -7,15 +7,15 @@ export default function Home() {
         <p className="eyebrow">Reading-first · manuscript-centered · meaning-layered</p>
         <h1>Logos Incarnate</h1>
         <p className="hero-copy">
-          A Phase 1 proof of concept for a Bible study app that begins with quiet reading,
-          opens into a living manuscript, and introduces meaning before data overload.
+          A Bible study app that begins with quiet reading,
+          opens into a living manuscript, and provides meaning exploration.
         </p>
         <div className="hero-actions">
-          <Link className="primary-link" href="/genesis-2">
-            Enter the Genesis 2 experience
+          <Link className="primary-link" href="/read">
+            Start Reading
           </Link>
           <a className="secondary-link" href="#phase-one-focus">
-            See what this POC includes
+            See what this includes
           </a>
         </div>
       </section>
@@ -29,17 +29,17 @@ export default function Home() {
         <article>
           <span className="feature-number">02</span>
           <h2>Study manuscript mode</h2>
-          <p>Roomier spacing, margin-aware notes, and persistent visual study traces for Genesis 2.</p>
+          <p>Roomier spacing, margin-aware annotations, and persistent visual study traces.</p>
         </article>
         <article>
           <span className="feature-number">03</span>
-          <h2>Meaning explorer</h2>
-          <p>Curated targets like helper, woman, man, one flesh, side/rib, and naked / not ashamed.</p>
+          <h2>Multi-translation support</h2>
+          <p>Switch between translations and navigate books and chapters seamlessly.</p>
         </article>
         <article>
           <span className="feature-number">04</span>
-          <h2>Restrained graph preview</h2>
-          <p>Small relationship previews that stay subordinate to clarity and can expand later.</p>
+          <h2>Annotation tools</h2>
+          <p>Pen, marker, and eraser tools for underlining words and freehand drawing on the manuscript.</p>
         </article>
       </section>
     </main>
