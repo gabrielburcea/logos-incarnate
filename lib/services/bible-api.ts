@@ -1,5 +1,5 @@
 const API_KEY = process.env.NEXT_PUBLIC_BIBLE_API_KEY;
-const BASE_URL = 'https://api.scripture.api.bible/v1';
+const BASE_URL = 'https://rest.api.bible/v1';
 
 export interface BibleVersion {
   id: string;
