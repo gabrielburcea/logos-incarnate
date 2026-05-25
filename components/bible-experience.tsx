@@ -573,6 +573,7 @@ export function BibleExperience({ surface }: { surface: SurfaceMode }) {
             )}
           </div>
         )}
+        </div>
         
         {/* Center: Reading Mode / Study Manuscript toggle */}
         <nav className="header-mode-switcher" aria-label="Switch reading mode">
