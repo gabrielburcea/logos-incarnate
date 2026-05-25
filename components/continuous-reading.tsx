@@ -32,7 +32,6 @@ export function ContinuousReadingExperience() {
   const [showChapterDropdown, setShowChapterDropdown] = React.useState(false);
 
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const chapterRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const loadingNextRef = useRef(false);
   const loadingPrevRef = useRef(false);
@@ -51,42 +50,43 @@ export function ContinuousReadingExperience() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Infinite scroll — load next when near the bottom, previous when near the top
+  // Infinite scroll — load next when near the bottom, previous when near the top.
+  // The actual scroller in this layout is the window (`.experience-shell` uses `min-height: 100vh`).
   useEffect(() => {
-    const el = scrollContainerRef.current;
-    if (!el) return;
-
     const handleScroll = () => {
-      const { scrollTop, scrollHeight, clientHeight } = el;
-      const distFromBottom = scrollHeight - (scrollTop + clientHeight);
+      const scrollTop = window.scrollY;
+      const viewportH = window.innerHeight;
+      const docH = document.documentElement.scrollHeight;
+      const distFromBottom = docH - (scrollTop + viewportH);
 
-      if (distFromBottom < clientHeight * 0.5 && hasMoreNext && !loadingNextRef.current) {
+      if (distFromBottom < viewportH * 1.0 && hasMoreNext && !loadingNextRef.current) {
         loadingNextRef.current = true;
         loadNextChapters(2).finally(() => {
           loadingNextRef.current = false;
         });
       }
 
-      if (scrollTop < clientHeight * 0.5 && hasMorePrevious && !loadingPrevRef.current) {
+      if (scrollTop < viewportH * 0.5 && hasMorePrevious && !loadingPrevRef.current) {
         loadingPrevRef.current = true;
-        // Save the scroll height so we can preserve scroll position after prepending.
-        prevScrollHeightRef.current = el.scrollHeight;
+        // Save the document height so we can preserve scroll position after prepending.
+        prevScrollHeightRef.current = document.documentElement.scrollHeight;
         loadPreviousChapters(2).finally(() => {
           loadingPrevRef.current = false;
         });
       }
     };
 
-    el.addEventListener("scroll", handleScroll, { passive: true });
-    return () => el.removeEventListener("scroll", handleScroll);
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    // Trigger once on mount in case the initial content is shorter than the viewport.
+    handleScroll();
+    return () => window.removeEventListener("scroll", handleScroll);
   }, [hasMoreNext, hasMorePrevious, loadNextChapters, loadPreviousChapters]);
 
   // Preserve scroll position after prepending chapters at the top
   useLayoutEffect(() => {
-    const el = scrollContainerRef.current;
-    if (!el || prevScrollHeightRef.current == null) return;
-    const delta = el.scrollHeight - prevScrollHeightRef.current;
-    if (delta > 0) el.scrollTop += delta;
+    if (prevScrollHeightRef.current == null) return;
+    const delta = document.documentElement.scrollHeight - prevScrollHeightRef.current;
+    if (delta > 0) window.scrollBy(0, delta);
     prevScrollHeightRef.current = null;
   }, [loadedChapters]);
 
@@ -95,15 +95,18 @@ export function ContinuousReadingExperience() {
     if (!pendingScrollTo) return;
     const target = chapterRefs.current.get(pendingScrollTo);
     if (target) {
-      target.scrollIntoView({ behavior: "auto", block: "start" });
+      // Manual offset so the chapter heading clears the sticky header.
+      const rect = target.getBoundingClientRect();
+      const top = rect.top + window.scrollY - 70;
+      window.scrollTo({ top, behavior: "auto" });
       clearPendingScroll();
     }
   }, [pendingScrollTo, loadedChapters, clearPendingScroll]);
 
-  // Observe the currently visible chapter to keep selectors in sync with scrolling
+  // Observe the currently visible chapter to keep selectors in sync with scrolling.
+  // Uses the viewport (`root: null`) since the window is the scroller in this layout.
   useEffect(() => {
-    const root = scrollContainerRef.current;
-    if (!root || loadedChapters.length === 0) return;
+    if (loadedChapters.length === 0) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -118,9 +121,10 @@ export function ContinuousReadingExperience() {
         if (bookId && chapterId) setVisibleChapter(bookId, chapterId);
       },
       {
-        root,
-        // Trigger when the chapter heading is near the top of the viewport.
-        rootMargin: "0px 0px -70% 0px",
+        root: null,
+        // Top edge inset accounts for the sticky header (~70px); bottom edge inset makes
+        // the "active" zone roughly the top quarter of the viewport.
+        rootMargin: "-70px 0px -70% 0px",
         threshold: 0,
       }
     );
@@ -288,8 +292,8 @@ export function ContinuousReadingExperience() {
         </nav>
       </div>
 
-      {/* SCROLLABLE CONTENT */}
-      <div className="scrollable-content-area" ref={scrollContainerRef}>
+      {/* SCROLLABLE CONTENT (window is the scroller) */}
+      <div className="scrollable-content-area">
         <section className="reading-column" aria-label="Bible text">
           {loadedChapters.length === 0 && loading && (
             <div style={{ padding: "2rem", textAlign: "center", color: "#666" }}>
