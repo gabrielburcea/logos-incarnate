@@ -2193,3 +2193,395 @@ button {
     grid-template-columns: repeat(5, 1fr);
   }
 }
+
+/* ============================================================
+   Reading mode v2 — themes, sticky chapter banner,
+   translation dropdown, ESV-style typography (small caps,
+   first-line indent, italic footnote markers).
+   ============================================================ */
+
+/* Theme variables, scoped to the reading shell so the rest of the app
+   keeps its existing light cream theme. */
+.experience-shell--reading.theme-light {
+  --read-bg: #f7f1e6;
+  --read-paper: #fffdf8;
+  --read-ink: #221a12;
+  --read-muted: #6f6255;
+  --read-accent: #6f4e37;
+  --read-soft: rgba(111, 78, 55, 0.1);
+  --read-line: rgba(88, 64, 43, 0.14);
+  --read-banner-bg: rgba(247, 241, 230, 0.78);
+  --read-header-bg: rgba(255, 253, 248, 0.95);
+}
+
+.experience-shell--reading.theme-dark {
+  --read-bg: #1a1814;
+  --read-paper: #1a1814;
+  --read-ink: #e9e3d4;
+  --read-muted: #8c8474;
+  --read-accent: #c9b07f;
+  --read-soft: rgba(201, 176, 127, 0.12);
+  --read-line: rgba(201, 176, 127, 0.18);
+  --read-banner-bg: rgba(159, 142, 96, 0.45);
+  --read-header-bg: rgba(26, 24, 20, 0.94);
+}
+
+.experience-shell--reading {
+  background: var(--read-bg);
+  color: var(--read-ink);
+  min-height: 100vh;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* Re-skin the frozen header to follow the reading theme. */
+.experience-shell--reading .frozen-header-bar {
+  background: var(--read-header-bg);
+  border-bottom-color: var(--read-line);
+  box-shadow: 0 1px 0 var(--read-line);
+}
+
+.experience-shell--reading .header-back-link,
+.experience-shell--reading .mode-btn,
+.experience-shell--reading .theme-toggle-btn {
+  color: var(--read-muted);
+}
+
+.experience-shell--reading .header-back-link:hover,
+.experience-shell--reading .mode-btn:hover,
+.experience-shell--reading .theme-toggle-btn:hover {
+  color: var(--read-ink);
+  background: var(--read-soft);
+}
+
+.experience-shell--reading .mode-btn.active {
+  color: var(--read-accent);
+}
+
+.experience-shell--reading .reading-column {
+  background: transparent;
+}
+
+/* ----- Theme toggle button ----- */
+.theme-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+/* ----- Translation dropdown ----- */
+.trans-dropdown-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.trans-dropdown-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.4rem 0.7rem;
+  background: transparent;
+  border: 1px solid var(--read-line);
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--read-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.trans-dropdown-trigger:hover {
+  color: var(--read-ink);
+  border-color: var(--read-accent);
+  background: var(--read-soft);
+}
+
+.trans-dropdown-trigger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.trans-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 0.4rem);
+  left: 0;
+  min-width: 220px;
+  z-index: 1100;
+  background: var(--read-paper);
+  border: 1px solid var(--read-line);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  padding: 0.3rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.trans-dropdown-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding: 0.55rem 0.75rem;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  text-align: left;
+  cursor: pointer;
+  color: var(--read-ink);
+  transition: background 0.15s ease;
+}
+
+.trans-dropdown-item:hover {
+  background: var(--read-soft);
+}
+
+.trans-dropdown-item.is-active {
+  background: var(--read-soft);
+  color: var(--read-accent);
+}
+
+.trans-dropdown-abbr {
+  font-weight: 600;
+  font-size: 0.85rem;
+  letter-spacing: 0.04em;
+}
+
+.trans-dropdown-name {
+  font-size: 0.78rem;
+  color: var(--read-muted);
+}
+
+/* Reference pill (book + chapter only — opens the full picker). */
+.experience-shell--reading .bible-picker-trigger.ref-only {
+  border-color: var(--read-line);
+  color: var(--read-ink);
+}
+
+.experience-shell--reading .bible-picker-trigger.ref-only:hover {
+  background: var(--read-soft);
+  border-color: var(--read-accent);
+}
+
+.experience-shell--reading .picker-trigger-ref {
+  color: var(--read-accent);
+}
+
+.experience-shell--reading .picker-trigger-sep {
+  color: var(--read-muted);
+  margin: 0 0.15rem;
+}
+
+/* ----- Sticky chapter banner ----- */
+.chapter-banner {
+  position: sticky;
+  top: 56px; /* sits just below the frozen header */
+  z-index: 900;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 0.85rem 1rem;
+  background: var(--read-banner-bg);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  pointer-events: none;
+  transition: background 0.2s ease;
+}
+
+.chapter-banner-label {
+  font-family: 'Crimson Text', Georgia, serif;
+  font-size: 1.25rem;
+  font-weight: 500;
+  color: var(--read-ink);
+  letter-spacing: 0.5px;
+}
+
+/* Visually hide the per-chapter anchor heading (the banner shows it instead),
+   but keep it in the DOM so it remains a scroll/observer landmark. */
+.chapter-anchor-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ----- Reading content typography (ESV-style) ----- */
+.experience-shell--reading .reading-column {
+  width: min(680px, calc(100% - 2.5rem));
+  margin: 1.5rem auto 4rem;
+  padding: 1.25rem 0.5rem 4rem;
+}
+
+.experience-shell--reading .continuous-chapter {
+  margin-bottom: 2.5rem;
+  scroll-margin-top: 110px; /* header + banner */
+}
+
+.experience-shell--reading .chapter-html-content {
+  font-family: 'Crimson Text', 'Iowan Old Style', Georgia, 'Times New Roman', serif;
+  font-size: 1.3rem;
+  line-height: 1.6;
+  color: var(--read-ink);
+  /* Justified gives the columnar print feel; hyphens prevent ragged gaps. */
+  text-align: left;
+  hyphens: auto;
+  -webkit-hyphens: auto;
+}
+
+/* Continuous prose: minimal paragraph spacing, first-line indent on
+   paragraphs after the first of each section. */
+.experience-shell--reading .chapter-html-content p {
+  margin: 0;
+  text-indent: 0;
+}
+
+.experience-shell--reading .chapter-html-content p + p {
+  text-indent: 1.5em;
+}
+
+/* Verse numbers — small italic superscript in muted accent (ESV/Crossway style). */
+.experience-shell--reading .chapter-html-content .v {
+  font-family: inherit;
+  font-style: normal;
+  font-weight: 600;
+  font-size: 0.72em;
+  vertical-align: super;
+  line-height: 0;
+  color: var(--read-accent);
+  margin-right: 0.25em;
+  margin-left: 0.05em;
+  opacity: 0.95;
+}
+
+/* Section headings — italic, regular weight, on their own line.
+   They reset the paragraph-indent run, so the verse following one
+   appears indented as a new paragraph. */
+.experience-shell--reading .chapter-html-content .s,
+.experience-shell--reading .chapter-html-content .s1,
+.experience-shell--reading .chapter-html-content .s2,
+.experience-shell--reading .chapter-html-content .d {
+  display: block;
+  margin: 1.75rem 0 0.6rem;
+  font-style: italic;
+  font-weight: 400;
+  font-size: 1.05em;
+  color: var(--read-ink);
+  text-indent: 0;
+  letter-spacing: 0.01em;
+}
+
+/* Divine name "LORD" in small caps (USFM `nd`). */
+.experience-shell--reading .chapter-html-content .nd {
+  font-variant-caps: small-caps;
+  -webkit-font-feature-settings: "smcp";
+  font-feature-settings: "smcp";
+  letter-spacing: 0.06em;
+}
+
+/* Footnote markers (USFM `f`, `fr`, `ft`, `fq`, `fqa`, `x`, `xt`).
+   Renders the cross-reference letter/number as a small italic superscript. */
+.experience-shell--reading .chapter-html-content .f,
+.experience-shell--reading .chapter-html-content .x {
+  font-style: italic;
+  font-size: 0.7em;
+  vertical-align: super;
+  line-height: 0;
+  color: var(--read-muted);
+  margin: 0 0.12em;
+  cursor: help;
+}
+
+/* Hide the verbose footnote body that follows the marker in some translations. */
+.experience-shell--reading .chapter-html-content .f .fr,
+.experience-shell--reading .chapter-html-content .f .ft,
+.experience-shell--reading .chapter-html-content .f .fq,
+.experience-shell--reading .chapter-html-content .f .fqa,
+.experience-shell--reading .chapter-html-content .x .xt,
+.experience-shell--reading .chapter-html-content .x .xo {
+  display: none;
+}
+
+/* The first letter inside `.f` is typically the marker (a, b, c...) — show it. */
+.experience-shell--reading .chapter-html-content .f::before {
+  /* No-op: keep default marker rendering. */
+}
+
+/* Selah and other inline `qs` style cues — italic, slight indent. */
+.experience-shell--reading .chapter-html-content .qs {
+  font-style: italic;
+  color: var(--read-muted);
+}
+
+/* Poetry indent levels (Psalms etc.). */
+.experience-shell--reading .chapter-html-content .q,
+.experience-shell--reading .chapter-html-content .q1 {
+  display: block;
+  margin-left: 1.5em;
+  text-indent: -0.75em;
+}
+
+.experience-shell--reading .chapter-html-content .q2 {
+  display: block;
+  margin-left: 3em;
+  text-indent: -0.75em;
+}
+
+/* Status / loading text. */
+.experience-shell--reading .reading-status {
+  padding: 2rem;
+  text-align: center;
+  color: var(--read-muted);
+  font-family: 'Crimson Text', Georgia, serif;
+  font-size: 0.95rem;
+  font-style: italic;
+}
+
+.experience-shell--reading .reading-status--error {
+  color: #ff6b6b;
+  font-style: normal;
+}
+
+.experience-shell--reading .reading-status--end {
+  padding: 3rem;
+  opacity: 0.7;
+}
+
+/* When the picker overlay is open in dark mode, give it a matching skin. */
+.experience-shell--reading.theme-dark + .bible-picker-overlay .bible-picker-panel,
+.experience-shell--reading.theme-dark ~ .bible-picker-overlay .bible-picker-panel {
+  background: #1f1c17;
+  color: #e9e3d4;
+}
+
+/* ----- Mobile tweaks ----- */
+@media (max-width: 600px) {
+  .experience-shell--reading .chapter-html-content {
+    font-size: 1.2rem;
+    line-height: 1.55;
+  }
+
+  .chapter-banner {
+    top: 52px;
+    padding: 0.65rem 1rem;
+  }
+
+  .chapter-banner-label {
+    font-size: 1.1rem;
+  }
+
+  .trans-dropdown-trigger {
+    font-size: 0.8rem;
+    padding: 0.35rem 0.6rem;
+  }
+}

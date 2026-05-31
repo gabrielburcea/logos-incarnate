@@ -41,9 +41,15 @@ export function useContinuousBible() {
         setLoading(true);
         setError(null);
         const data = await bibleAPI.getBibles();
-        const selectedBibles = data.filter(
-          (b) => b.id === BIBLE_VERSIONS.KJV || b.id === BIBLE_VERSIONS.NIV
-        );
+        const wanted = new Set<string>([
+          BIBLE_VERSIONS.KJV,
+          BIBLE_VERSIONS.NIV,
+          BIBLE_VERSIONS.ESV,
+        ]);
+        const order = [BIBLE_VERSIONS.ESV, BIBLE_VERSIONS.KJV, BIBLE_VERSIONS.NIV];
+        const selectedBibles = data
+          .filter((b) => wanted.has(b.id))
+          .sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
         setBibles(selectedBibles);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load bibles');

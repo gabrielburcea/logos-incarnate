@@ -29,13 +29,44 @@ export function ContinuousReadingExperience() {
   } = useContinuousBible();
 
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [transDropdownOpen, setTransDropdownOpen] = useState(false);
+  const [theme, setTheme] = useState<"light" | "dark">("light");
+  // The chapter currently in view (drives the sticky banner). Initialized from the
+  // selected chapter but only updated by the IntersectionObserver as the user scrolls.
+  const [visibleChapterId, setVisibleChapterId] = useState<string>("");
+
   const chapterRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const transDropdownRef = useRef<HTMLDivElement>(null);
   const loadingNextRef = useRef(false);
   const loadingPrevRef = useRef(false);
   const prevScrollHeightRef = useRef<number | null>(null);
   // While locked, the IntersectionObserver won't overwrite the explicitly-selected chapter.
   // This is what prevents the "jumps to chapter 2" bug after a manual selection.
   const scrollLockedRef = useRef(false);
+
+  // -------- Theme persistence --------
+  useEffect(() => {
+    const saved = (typeof window !== "undefined" && localStorage.getItem("read-theme")) as
+      | "light"
+      | "dark"
+      | null;
+    if (saved === "light" || saved === "dark") setTheme(saved);
+  }, []);
+  useEffect(() => {
+    if (typeof window !== "undefined") localStorage.setItem("read-theme", theme);
+  }, [theme]);
+
+  // -------- Close translation dropdown on outside click --------
+  useEffect(() => {
+    if (!transDropdownOpen) return;
+    const onDown = (e: MouseEvent) => {
+      if (transDropdownRef.current && !transDropdownRef.current.contains(e.target as Node)) {
+        setTransDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [transDropdownOpen]);
 
   // -------- Infinite scroll (window is the scroller) --------
   useEffect(() => {
@@ -107,7 +138,10 @@ export function ContinuousReadingExperience() {
         const el = visible.target as HTMLElement;
         const bookId = el.dataset.bookId;
         const chapterId = el.dataset.chapterId;
-        if (bookId && chapterId) setVisibleChapter(bookId, chapterId);
+        if (bookId && chapterId) {
+          setVisibleChapter(bookId, chapterId);
+          setVisibleChapterId(chapterId);
+        }
       },
       {
         root: null,
@@ -119,6 +153,11 @@ export function ContinuousReadingExperience() {
     chapterRefs.current.forEach((el) => observer.observe(el));
     return () => observer.disconnect();
   }, [loadedChapters, setVisibleChapter]);
+
+  // Keep the visible-chapter id seeded after a manual jump so the banner shows immediately.
+  useEffect(() => {
+    if (selectedChapterId && !visibleChapterId) setVisibleChapterId(selectedChapterId);
+  }, [selectedChapterId, visibleChapterId]);
 
   const registerChapterRef = (id: string) => (el: HTMLDivElement | null) => {
     if (el) chapterRefs.current.set(id, el);
@@ -136,31 +175,85 @@ export function ContinuousReadingExperience() {
   const currentTranslationAbbr =
     bibles.find((b) => b.id === selectedBibleId)?.abbreviation || "";
 
+  // Banner label tracks the chapter currently in view (which may differ briefly from selected).
+  const inViewChapter =
+    loadedChapters.find((c) => c.id === visibleChapterId) ||
+    loadedChapters.find((c) => c.id === selectedChapterId) ||
+    loadedChapters[0];
+  const bannerLabel = inViewChapter
+    ? `${inViewChapter.bookName} ${inViewChapter.chapterNumber}`
+    : "";
+
   const handlePickChapter = (bookId: string, chapterId: string) => {
     setPickerOpen(false);
     jumpToChapter(bookId, chapterId);
   };
 
+  const handlePickTranslation = (id: string) => {
+    setTransDropdownOpen(false);
+    selectBible(id);
+  };
+
+  const toggleTheme = () => setTheme((t) => (t === "light" ? "dark" : "light"));
+
   return (
-    <main className="experience-shell experience-shell--reading">
+    <main className={`experience-shell experience-shell--reading theme-${theme}`}>
       {/* FROZEN HEADER ROW */}
       <div className="frozen-header-bar">
         <Link className="header-back-link" href="/" title="Back to home">
           ←
         </Link>
 
-        {/* Single picker trigger: "KJV · Exodus 8 ▾" */}
         <div className="header-bible-selector">
+          {/* Translation dropdown */}
+          <div className="trans-dropdown-wrap" ref={transDropdownRef}>
+            <button
+              type="button"
+              className="trans-dropdown-trigger"
+              onClick={() => setTransDropdownOpen((v) => !v)}
+              aria-haspopup="listbox"
+              aria-expanded={transDropdownOpen}
+              disabled={bibles.length === 0}
+              title="Change translation"
+            >
+              <span>{currentTranslationAbbr || "…"}</span>
+              <span className="picker-trigger-caret" aria-hidden="true">
+                {transDropdownOpen ? "▴" : "▾"}
+              </span>
+            </button>
+            {transDropdownOpen && (
+              <div className="trans-dropdown-menu" role="listbox">
+                {bibles.map((b) => (
+                  <button
+                    key={b.id}
+                    type="button"
+                    role="option"
+                    aria-selected={selectedBibleId === b.id}
+                    className={`trans-dropdown-item ${selectedBibleId === b.id ? "is-active" : ""}`}
+                    onClick={() => handlePickTranslation(b.id)}
+                  >
+                    <span className="trans-dropdown-abbr">{b.abbreviation}</span>
+                    <span className="trans-dropdown-name">{b.name}</span>
+                  </button>
+                ))}
+                {bibles.length === 0 && (
+                  <div className="trans-dropdown-item">Loading…</div>
+                )}
+              </div>
+            )}
+          </div>
+
+          <span className="picker-trigger-sep">·</span>
+
+          {/* Reference button (opens the full picker) */}
           <button
             type="button"
-            className="bible-picker-trigger"
+            className="bible-picker-trigger ref-only"
             onClick={() => setPickerOpen(true)}
             aria-haspopup="dialog"
             aria-expanded={pickerOpen}
             disabled={books.length === 0}
           >
-            <span className="picker-trigger-trans">{currentTranslationAbbr || "…"}</span>
-            <span className="picker-trigger-sep">·</span>
             <span className="picker-trigger-ref">
               {currentBookName ? `${currentBookName} ${currentChapterNumber}` : "Loading…"}
             </span>
@@ -171,6 +264,36 @@ export function ContinuousReadingExperience() {
         </div>
 
         <nav className="header-mode-switcher" aria-label="Switch reading mode">
+          <button
+            type="button"
+            className="theme-toggle-btn"
+            onClick={toggleTheme}
+            title={theme === "light" ? "Switch to dark theme" : "Switch to light theme"}
+            aria-label="Toggle theme"
+          >
+            {theme === "light" ? (
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <path
+                  d="M13.5 9.5A5.5 5.5 0 0 1 6.5 2.5a.5.5 0 0 0-.7-.6A6.5 6.5 0 1 0 14.1 10.2a.5.5 0 0 0-.6-.7z"
+                  fill="currentColor"
+                />
+              </svg>
+            ) : (
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <circle cx="8" cy="8" r="3" fill="currentColor" />
+                <g stroke="currentColor" strokeWidth="1.4" strokeLinecap="round">
+                  <line x1="8" y1="1.5" x2="8" y2="3" />
+                  <line x1="8" y1="13" x2="8" y2="14.5" />
+                  <line x1="1.5" y1="8" x2="3" y2="8" />
+                  <line x1="13" y1="8" x2="14.5" y2="8" />
+                  <line x1="3.3" y1="3.3" x2="4.4" y2="4.4" />
+                  <line x1="11.6" y1="11.6" x2="12.7" y2="12.7" />
+                  <line x1="3.3" y1="12.7" x2="4.4" y2="11.6" />
+                  <line x1="11.6" y1="4.4" x2="12.7" y2="3.3" />
+                </g>
+              </svg>
+            )}
+          </button>
           <Link href="/read" className="mode-btn active" title="Reading Mode">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
               <path d="M3 3h10M3 8h10M3 13h7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
@@ -185,25 +308,28 @@ export function ContinuousReadingExperience() {
         </nav>
       </div>
 
+      {/* STICKY CHAPTER BANNER (floats below the header, follows scroll) */}
+      {bannerLabel && (
+        <div className="chapter-banner" aria-live="polite">
+          <span className="chapter-banner-label">{bannerLabel}</span>
+        </div>
+      )}
+
       {/* SCROLLABLE CONTENT (window is the scroller) */}
       <div className="scrollable-content-area">
         <section className="reading-column" aria-label="Bible text">
           {loadedChapters.length === 0 && loading && (
-            <div style={{ padding: "2rem", textAlign: "center", color: "#666" }}>
-              Loading chapters...
-            </div>
+            <div className="reading-status">Loading chapters…</div>
           )}
 
           {error && loadedChapters.length === 0 && (
-            <div style={{ padding: "2rem", textAlign: "center", color: "#ff2d55" }}>
+            <div className="reading-status reading-status--error">
               Error loading content: {error}
             </div>
           )}
 
           {loading && hasMorePrevious && loadedChapters.length > 0 && (
-            <div style={{ padding: "1rem", textAlign: "center", color: "#666" }}>
-              Loading previous chapters...
-            </div>
+            <div className="reading-status">Loading previous chapters…</div>
           )}
 
           {loadedChapters.map((chapter) => (
@@ -214,11 +340,11 @@ export function ContinuousReadingExperience() {
               data-chapter-id={chapter.id}
               className="continuous-chapter"
             >
-              <div className="chapter-title-embedded">
-                <h1 className="chapter-heading">
-                  {chapter.bookName} {chapter.chapterNumber}
-                </h1>
-              </div>
+              {/* Inline anchor: hidden visually but provides the boundary the observer
+                  uses. The visible label is the sticky banner above. */}
+              <h2 className="chapter-anchor-label">
+                {chapter.bookName} {chapter.chapterNumber}
+              </h2>
               <div className="reading-mode-content">
                 <div
                   className="chapter-html-content"
@@ -229,13 +355,11 @@ export function ContinuousReadingExperience() {
           ))}
 
           {loading && hasMoreNext && loadedChapters.length > 0 && (
-            <div style={{ padding: "2rem", textAlign: "center", color: "#666" }}>
-              Loading more chapters...
-            </div>
+            <div className="reading-status">Loading more chapters…</div>
           )}
 
           {!hasMoreNext && loadedChapters.length > 0 && (
-            <div style={{ padding: "3rem", textAlign: "center", color: "#999", fontStyle: "italic" }}>
+            <div className="reading-status reading-status--end">
               You&apos;ve reached the end of the Bible
             </div>
           )}

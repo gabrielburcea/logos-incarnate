@@ -191,6 +191,7 @@ export const bibleAPI = new BibleAPIService();
 export const BIBLE_VERSIONS = {
   KJV: 'de4e12af7f28f599-02', // King James Version
   NIV: '78a9f6124f344018-01', // New International Version 2011
+  ESV: 'f421fe261da7624f-01', // English Standard Version
   ASV: '06125adad2d5898a-01', // American Standard Version
   WEB: '9879dbb7cfe39e4d-01', // World English Bible
 };
