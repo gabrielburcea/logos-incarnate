@@ -175,14 +175,25 @@ export function ContinuousReadingExperience() {
   const currentTranslationAbbr =
     bibles.find((b) => b.id === selectedBibleId)?.abbreviation || "";
 
-  // Banner label tracks the chapter currently in view (which may differ briefly from selected).
+  // The chapter currently in view (drives both the sticky banner AND the header
+  // reference button) — derived from loadedChapters so it stays in sync as the
+  // user scrolls across book boundaries (no dependency on the `chapters` list).
   const inViewChapter =
     loadedChapters.find((c) => c.id === visibleChapterId) ||
     loadedChapters.find((c) => c.id === selectedChapterId) ||
     loadedChapters[0];
+  const inViewBookName = inViewChapter?.bookName || "";
+  const inViewChapterNumber = inViewChapter?.chapterNumber || "";
   const bannerLabel = inViewChapter
-    ? `${inViewChapter.bookName} ${inViewChapter.chapterNumber}`
+    ? `${inViewBookName} ${inViewChapterNumber}`
     : "";
+
+  // Fall back to selected* when nothing is loaded yet (initial state).
+  const headerBookName = inViewBookName || currentBookName;
+  const headerChapterNumber =
+    inViewChapterNumber ||
+    chapters.find((c) => c.id === selectedChapterId)?.number ||
+    "";
 
   const handlePickChapter = (bookId: string, chapterId: string) => {
     setPickerOpen(false);
@@ -255,7 +266,7 @@ export function ContinuousReadingExperience() {
             disabled={books.length === 0}
           >
             <span className="picker-trigger-ref">
-              {currentBookName ? `${currentBookName} ${currentChapterNumber}` : "Loading…"}
+              {headerBookName ? `${headerBookName} ${headerChapterNumber}` : "Loading…"}
             </span>
             <span className="picker-trigger-caret" aria-hidden="true">
               {pickerOpen ? "▴" : "▾"}
@@ -340,11 +351,15 @@ export function ContinuousReadingExperience() {
               data-chapter-id={chapter.id}
               className="continuous-chapter"
             >
-              {/* Inline anchor: hidden visually but provides the boundary the observer
-                  uses. The visible label is the sticky banner above. */}
+              {/* Always-in-DOM heading. Visually hidden on desktop (banner covers it),
+                  shown as a small inline label on touch devices so readers see
+                  chapter boundaries while swiping/scrolling. */}
               <h2 className="chapter-anchor-label">
                 {chapter.bookName} {chapter.chapterNumber}
               </h2>
+              <div className="chapter-inline-touch" aria-hidden="true">
+                {chapter.bookName} {chapter.chapterNumber}
+              </div>
               <div className="reading-mode-content">
                 <div
                   className="chapter-html-content"
