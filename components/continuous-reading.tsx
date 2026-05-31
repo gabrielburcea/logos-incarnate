@@ -365,17 +365,15 @@ export function ContinuousReadingExperience() {
               data-chapter-id={chapter.id}
               className="continuous-chapter"
             >
-              {/* Always-in-DOM heading for screen readers. Visible chapter
-                  divider below it provides the in-prose boundary indicator. */}
+              {/* Always-in-DOM heading for screen readers. Visible drop-cap
+                  chapter number below provides the in-prose boundary. */}
               <h2 className="chapter-anchor-label">
                 {chapter.bookName} {chapter.chapterNumber}
               </h2>
-              <div className="chapter-divider" aria-hidden="true">
-                <span className="chapter-divider-label">
-                  {chapter.bookName} {chapter.chapterNumber}
-                </span>
-              </div>
               <div className="reading-mode-content">
+                <span className="chapter-dropcap" aria-hidden="true">
+                  {chapter.chapterNumber}
+                </span>
                 <div
                   className="chapter-html-content"
                   dangerouslySetInnerHTML={{ __html: chapter.content }}

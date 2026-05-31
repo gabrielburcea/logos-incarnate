@@ -2412,38 +2412,38 @@ button {
   border: 0;
 }
 
-/* Always-visible in-prose chapter divider. Renders as a centered small-caps
-   label on a hairline rule, working in any viewport. Reliable replacement for
-   the previous touch-only / media-query approach (which mis-detected
-   iPad-with-keyboard as desktop). */
-.chapter-divider {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 1rem;
-  margin: 2.5rem 0 1.75rem;
-  text-indent: 0;
-}
-
-.chapter-divider::before,
-.chapter-divider::after {
-  content: "";
-  flex: 1;
-  height: 1px;
-  background: var(--read-line);
-}
-
-.chapter-divider-label {
+/* ESV-style drop-cap chapter number. Floats left so verses 1-2 wrap around
+   it (matches the look of major reading apps). Replaces the old centered
+   "— GENESIS 5 —" hairline divider. */
+.chapter-dropcap {
+  float: left;
   font-family: 'Crimson Text', Georgia, serif;
-  font-size: 0.82rem;
-  font-weight: 600;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--read-muted);
-  white-space: nowrap;
+  font-weight: 400;
+  font-size: 4.5rem;
+  line-height: 0.9;
+  margin: 0.35rem 0.9rem 0 0;
+  color: var(--read-ink);
+  letter-spacing: -0.02em;
+  /* Pull the number a touch up so its cap-height aligns with the first line. */
+  padding-top: 0.1rem;
 }
 
-.continuous-chapter:first-child .chapter-divider {
+/* The reading-mode-content wrapper is the float container. Without this its
+   bottom margin would collapse around the floated dropcap. */
+.experience-shell--reading .reading-mode-content {
+  overflow: visible;
+}
+
+/* When a dropcap is present, suppress the leading "1 " verse marker on the
+   very first verse — the giant numeral already announces verse 1. */
+.experience-shell--reading .reading-mode-content
+  .chapter-dropcap + .chapter-html-content > p:first-of-type .v:first-child,
+.experience-shell--reading .reading-mode-content
+  .chapter-dropcap + .chapter-html-content .p:first-of-type .v:first-child {
+  display: none;
+}
+
+.continuous-chapter:first-child .chapter-dropcap {
   margin-top: 0;
 }
 
