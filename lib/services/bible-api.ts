@@ -59,6 +59,8 @@ export interface ChapterContent {
 
 class BibleAPIService {
   private headers: HeadersInit;
+  private localBookCache = new Map<string, Promise<LocalBook>>();
+  private localManifestCache = new Map<string, Promise<LocalManifest>>();
 
   constructor() {
     this.headers = {
@@ -67,34 +69,105 @@ class BibleAPIService {
     };
   }
 
-  async getBibles(): Promise<BibleVersion[]> {
-    try {
-      const response = await fetch(`${BASE_URL}/bibles`, {
-        headers: this.headers,
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Failed to fetch bibles: ${response.statusText}`);
-      }
-      
-      const data = await response.json();
-      return data.data || [];
-    } catch (error) {
-      console.error('Error fetching bibles:', error);
-      throw error;
+  // ---- Local-bible helpers ---------------------------------------------------
+  // A bibleId of `local:KJV` means: read pre-bundled JSON from /bibles/KJV/.
+  // The files are populated by `npm run download:bibles`.
+
+  private isLocal(bibleId: string): boolean {
+    return bibleId.startsWith('local:');
+  }
+
+  private localAbbr(bibleId: string): string {
+    return bibleId.slice('local:'.length);
+  }
+
+  private async loadLocalManifest(bibleId: string): Promise<LocalManifest> {
+    const abbr = this.localAbbr(bibleId);
+    if (!this.localManifestCache.has(abbr)) {
+      this.localManifestCache.set(
+        abbr,
+        fetch(`/bibles/${abbr}/manifest.json`).then((r) => {
+          if (!r.ok) throw new Error(`Missing local bible: ${abbr}`);
+          return r.json();
+        })
+      );
     }
+    return this.localManifestCache.get(abbr)!;
+  }
+
+  private async loadLocalBook(bibleId: string, bookId: string): Promise<LocalBook> {
+    const abbr = this.localAbbr(bibleId);
+    const key = `${abbr}:${bookId}`;
+    if (!this.localBookCache.has(key)) {
+      this.localBookCache.set(
+        key,
+        fetch(`/bibles/${abbr}/${bookId}.json`).then((r) => {
+          if (!r.ok) throw new Error(`Missing local book: ${abbr}/${bookId}`);
+          return r.json();
+        })
+      );
+    }
+    return this.localBookCache.get(key)!;
+  }
+
+  // ---- Public API ------------------------------------------------------------
+
+  async getBibles(): Promise<BibleVersion[]> {
+    // Discover local bundled translations first.
+    const localResults = await Promise.all(
+      LOCAL_BIBLE_ABBRS.map(async (abbr) => {
+        try {
+          const r = await fetch(`/bibles/${abbr}/manifest.json`);
+          if (!r.ok) return null;
+          const m = (await r.json()) as LocalManifest;
+          return {
+            id: m.id,
+            name: m.name,
+            abbreviation: m.abbreviation,
+            description: m.description || `${m.name} (bundled)`,
+            language: m.language || { id: 'eng', name: 'English' },
+          } as BibleVersion;
+        } catch {
+          return null;
+        }
+      })
+    );
+    const local = localResults.filter((b): b is BibleVersion => b !== null);
+
+    // Then the remote ones from API.Bible.
+    let remote: BibleVersion[] = [];
+    try {
+      const response = await fetch(`${BASE_URL}/bibles`, { headers: this.headers });
+      if (response.ok) {
+        const data = await response.json();
+        remote = data.data || [];
+      }
+    } catch (error) {
+      console.error('Error fetching remote bibles:', error);
+    }
+
+    return [...local, ...remote];
   }
 
   async getBooks(bibleId: string): Promise<Book[]> {
+    if (this.isLocal(bibleId)) {
+      const manifest = await this.loadLocalManifest(bibleId);
+      return manifest.books.map((b) => ({
+        id: b.id,
+        bibleId,
+        abbreviation: b.abbreviation,
+        name: b.name,
+        nameLong: b.nameLong,
+      }));
+    }
+
     try {
       const response = await fetch(`${BASE_URL}/bibles/${bibleId}/books`, {
         headers: this.headers,
       });
-      
       if (!response.ok) {
         throw new Error(`Failed to fetch books: ${response.statusText}`);
       }
-      
       const data = await response.json();
       return data.data || [];
     } catch (error) {
@@ -104,15 +177,24 @@ class BibleAPIService {
   }
 
   async getChapters(bibleId: string, bookId: string): Promise<Chapter[]> {
+    if (this.isLocal(bibleId)) {
+      const book = await this.loadLocalBook(bibleId, bookId);
+      return book.chapters.map((c) => ({
+        id: c.id,
+        bibleId,
+        bookId,
+        number: c.number,
+        reference: c.reference,
+      }));
+    }
+
     try {
       const response = await fetch(`${BASE_URL}/bibles/${bibleId}/books/${bookId}/chapters`, {
         headers: this.headers,
       });
-      
       if (!response.ok) {
         throw new Error(`Failed to fetch chapters: ${response.statusText}`);
       }
-      
       const data = await response.json();
       return data.data || [];
     } catch (error) {
@@ -122,18 +204,31 @@ class BibleAPIService {
   }
 
   async getChapter(bibleId: string, chapterId: string): Promise<ChapterContent> {
+    if (this.isLocal(bibleId)) {
+      const [bookId] = chapterId.split('.');
+      const book = await this.loadLocalBook(bibleId, bookId);
+      const ch = book.chapters.find((c) => c.id === chapterId);
+      if (!ch) throw new Error(`Local chapter not found: ${chapterId}`);
+      return {
+        id: ch.id,
+        bibleId,
+        number: ch.number,
+        bookId,
+        reference: ch.reference,
+        content: ch.content,
+        copyright: book.copyright || '',
+        verseCount: ch.verseCount || 0,
+      };
+    }
+
     try {
       const response = await fetch(
         `${BASE_URL}/bibles/${bibleId}/chapters/${chapterId}?content-type=html&include-notes=false&include-titles=true&include-chapter-numbers=false&include-verse-numbers=true&include-verse-spans=false`,
-        {
-          headers: this.headers,
-        }
+        { headers: this.headers }
       );
-      
       if (!response.ok) {
         throw new Error(`Failed to fetch chapter: ${response.statusText}`);
       }
-      
       const result = await response.json();
       return result.data;
     } catch (error) {
@@ -187,11 +282,51 @@ class BibleAPIService {
 
 export const bibleAPI = new BibleAPIService();
 
+// ---- Local-bundle types & registry -----------------------------------------
+
+interface LocalManifest {
+  id: string; // e.g. "local:KJV"
+  name: string;
+  abbreviation: string;
+  description?: string;
+  language?: { id: string; name: string };
+  copyright?: string;
+  books: Array<{
+    id: string;
+    name: string;
+    nameLong: string;
+    abbreviation: string;
+  }>;
+}
+
+interface LocalBook {
+  id: string;
+  name: string;
+  nameLong: string;
+  copyright?: string;
+  chapters: Array<{
+    id: string;
+    number: string;
+    reference: string;
+    content: string;
+    verseCount?: number;
+  }>;
+}
+
+// Which translations are expected to be bundled under `public/bibles/{abbr}/`.
+// Add an entry here AND run `npm run download:bibles` to ship a new local copy.
+export const LOCAL_BIBLE_ABBRS = ['KJV', 'WEB', 'BSB'] as const;
+
 // Popular Bible version IDs for quick access
 export const BIBLE_VERSIONS = {
-  KJV: 'de4e12af7f28f599-02', // King James Version
-  NIV: '78a9f6124f344018-01', // New International Version 2011
-  ESV: 'f421fe261da7624f-01', // English Standard Version
-  ASV: '06125adad2d5898a-01', // American Standard Version
-  WEB: '9879dbb7cfe39e4d-01', // World English Bible
+  // Local bundles (preferred when present — instant load, no rate limit).
+  KJV_LOCAL: 'local:KJV',
+  WEB_LOCAL: 'local:WEB',
+  BSB_LOCAL: 'local:BSB',
+  // API.Bible IDs (kept for licensed translations).
+  KJV: 'de4e12af7f28f599-02',
+  NIV: '78a9f6124f344018-01',
+  ESV: 'f421fe261da7624f-01',
+  ASV: '06125adad2d5898a-01',
+  WEB: '9879dbb7cfe39e4d-01',
 };

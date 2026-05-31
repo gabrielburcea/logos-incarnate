@@ -463,10 +463,6 @@ button {
   text-align: center;
 }
 
-.chapter-html-content {
-  /* API returns paragraph tags with verses */
-}
-
 .chapter-html-content p {
   margin: 0 0 0.75rem 0;
   text-indent: 0;
@@ -2416,37 +2412,39 @@ button {
   border: 0;
 }
 
-/* Touch-only inline chapter label — appears between chapters on phones/tablets
-   so the chapter boundary is visible while swiping. Hidden on hover-capable
-   (desktop) devices where the sticky banner is enough. */
-.chapter-inline-touch {
-  display: none;
-  text-align: center;
-  margin: 1.5rem 0 1.25rem;
-  padding: 0.4rem 0;
-  font-family: 'Crimson Text', Georgia, serif;
-  font-size: 0.95rem;
-  font-style: italic;
-  font-weight: 500;
-  color: var(--read-muted);
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  border-top: 1px solid var(--read-line);
-  border-bottom: 1px solid var(--read-line);
+/* Always-visible in-prose chapter divider. Renders as a centered small-caps
+   label on a hairline rule, working in any viewport. Reliable replacement for
+   the previous touch-only / media-query approach (which mis-detected
+   iPad-with-keyboard as desktop). */
+.chapter-divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin: 2.5rem 0 1.75rem;
   text-indent: 0;
 }
 
-.continuous-chapter:first-child .chapter-inline-touch {
-  margin-top: 0;
-  border-top: 0;
-  padding-top: 0;
+.chapter-divider::before,
+.chapter-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--read-line);
 }
 
-/* Show the inline label only on touch devices (phones, tablets). */
-@media (hover: none) and (pointer: coarse) {
-  .chapter-inline-touch {
-    display: block;
-  }
+.chapter-divider-label {
+  font-family: 'Crimson Text', Georgia, serif;
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--read-muted);
+  white-space: nowrap;
+}
+
+.continuous-chapter:first-child .chapter-divider {
+  margin-top: 0;
 }
 
 /* Suppress the API.Bible inline chapter number — it renders as a giant drop
@@ -2554,11 +2552,6 @@ button {
 .experience-shell--reading .chapter-html-content .x .xt,
 .experience-shell--reading .chapter-html-content .x .xo {
   display: none;
-}
-
-/* The first letter inside `.f` is typically the marker (a, b, c...) — show it. */
-.experience-shell--reading .chapter-html-content .f::before {
-  /* No-op: keep default marker rendering. */
 }
 
 /* Selah and other inline `qs` style cues — italic, slight indent. */

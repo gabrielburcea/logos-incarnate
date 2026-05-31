@@ -12,7 +12,7 @@ export interface LoadedChapter {
 
 export function useContinuousBible() {
   const [bibles, setBibles] = useState<BibleVersion[]>([]);
-  const [selectedBibleId, setSelectedBibleId] = useState<string>(BIBLE_VERSIONS.KJV);
+  const [selectedBibleId, setSelectedBibleId] = useState<string>(BIBLE_VERSIONS.KJV_LOCAL);
   const [books, setBooks] = useState<Book[]>([]);
   const [selectedBookId, setSelectedBookId] = useState<string>('GEN');
   const [chapters, setChapters] = useState<Chapter[]>([]);
@@ -41,16 +41,30 @@ export function useContinuousBible() {
         setLoading(true);
         setError(null);
         const data = await bibleAPI.getBibles();
-        const wanted = new Set<string>([
-          BIBLE_VERSIONS.KJV,
-          BIBLE_VERSIONS.NIV,
+        // Preferred display order: local bundles first (instant + offline), then
+        // licensed translations from API.Bible. Falls back gracefully when a
+        // particular id isn't available.
+        const order = [
+          BIBLE_VERSIONS.KJV_LOCAL,
+          BIBLE_VERSIONS.WEB_LOCAL,
+          BIBLE_VERSIONS.BSB_LOCAL,
           BIBLE_VERSIONS.ESV,
-        ]);
-        const order = [BIBLE_VERSIONS.ESV, BIBLE_VERSIONS.KJV, BIBLE_VERSIONS.NIV];
+          BIBLE_VERSIONS.NIV,
+        ];
+        const wanted = new Set<string>(order);
         const selectedBibles = data
           .filter((b) => wanted.has(b.id))
           .sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
         setBibles(selectedBibles);
+
+        // If our preferred default (local KJV) isn't available, fall back
+        // to the first translation we did find so the page still renders.
+        if (
+          selectedBibles.length > 0 &&
+          !selectedBibles.find((b) => b.id === BIBLE_VERSIONS.KJV_LOCAL)
+        ) {
+          setSelectedBibleId(selectedBibles[0].id);
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load bibles');
       } finally {

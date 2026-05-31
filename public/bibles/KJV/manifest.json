@@ -1,0 +1,408 @@
+{
+  "id": "local:KJV",
+  "name": "King James Version",
+  "abbreviation": "KJV",
+  "description": "King James Version (bundled)",
+  "language": {
+    "id": "eng",
+    "name": "English"
+  },
+  "books": [
+    {
+      "id": "GEN",
+      "name": "Genesis",
+      "nameLong": "The First Book of Moses, called Genesis",
+      "abbreviation": "Gen"
+    },
+    {
+      "id": "EXO",
+      "name": "Exodus",
+      "nameLong": "The Second Book of Moses, called Exodus",
+      "abbreviation": "Exo"
+    },
+    {
+      "id": "LEV",
+      "name": "Leviticus",
+      "nameLong": "The Third Book of Moses, called Leviticus",
+      "abbreviation": "Lev"
+    },
+    {
+      "id": "NUM",
+      "name": "Numbers",
+      "nameLong": "The Fourth Book of Moses, called Numbers",
+      "abbreviation": "Num"
+    },
+    {
+      "id": "DEU",
+      "name": "Deuteronomy",
+      "nameLong": "The Fifth Book of Moses, called Deuteronomy",
+      "abbreviation": "Deu"
+    },
+    {
+      "id": "JOS",
+      "name": "Joshua",
+      "nameLong": "The Book of Joshua",
+      "abbreviation": "Jos"
+    },
+    {
+      "id": "JDG",
+      "name": "Judges",
+      "nameLong": "The Book of Judges",
+      "abbreviation": "Jdg"
+    },
+    {
+      "id": "RUT",
+      "name": "Ruth",
+      "nameLong": "The Book of Ruth",
+      "abbreviation": "Rut"
+    },
+    {
+      "id": "1SA",
+      "name": "1 Samuel",
+      "nameLong": "The First Book of Samuel Otherwise Called The First Book of the Kings",
+      "abbreviation": "1Sa"
+    },
+    {
+      "id": "2SA",
+      "name": "2 Samuel",
+      "nameLong": "The Second Book of Samuel Otherwise Called The Second Book of the Kings",
+      "abbreviation": "2Sa"
+    },
+    {
+      "id": "1KI",
+      "name": "1 Kings",
+      "nameLong": "The First Book of the Kings, Commonly Called the Third Book of the Kings",
+      "abbreviation": "1Ki"
+    },
+    {
+      "id": "2KI",
+      "name": "2 Kings",
+      "nameLong": "The Second Book of the Kings, Commonly Called the Fourth Book of the Kings",
+      "abbreviation": "2Ki"
+    },
+    {
+      "id": "1CH",
+      "name": "1 Chronicles",
+      "nameLong": "The First Book of the Chronicles",
+      "abbreviation": "1Ch"
+    },
+    {
+      "id": "2CH",
+      "name": "2 Chronicles",
+      "nameLong": "The Second Book of the Chronicles",
+      "abbreviation": "2Ch"
+    },
+    {
+      "id": "EZR",
+      "name": "Ezra",
+      "nameLong": "Ezra",
+      "abbreviation": "Ezr"
+    },
+    {
+      "id": "NEH",
+      "name": "Nehemiah",
+      "nameLong": "The Book of Nehemiah",
+      "abbreviation": "Neh"
+    },
+    {
+      "id": "EST",
+      "name": "Esther",
+      "nameLong": "The Book of Esther",
+      "abbreviation": "Est"
+    },
+    {
+      "id": "JOB",
+      "name": "Job",
+      "nameLong": "The Book of Job",
+      "abbreviation": "Job"
+    },
+    {
+      "id": "PSA",
+      "name": "Psalms",
+      "nameLong": "The Book of Psalms",
+      "abbreviation": "Psa"
+    },
+    {
+      "id": "PRO",
+      "name": "Proverbs",
+      "nameLong": "The Proverbs",
+      "abbreviation": "Pro"
+    },
+    {
+      "id": "ECC",
+      "name": "Ecclesiastes",
+      "nameLong": "Ecclesiastes or, the Preacher",
+      "abbreviation": "Ecc"
+    },
+    {
+      "id": "SNG",
+      "name": "Song of Solomon",
+      "nameLong": "The Song of Solomon",
+      "abbreviation": "Sng"
+    },
+    {
+      "id": "ISA",
+      "name": "Isaiah",
+      "nameLong": "The Book of the Prophet Isaiah",
+      "abbreviation": "Isa"
+    },
+    {
+      "id": "JER",
+      "name": "Jeremiah",
+      "nameLong": "The Book of the Prophet Jeremiah",
+      "abbreviation": "Jer"
+    },
+    {
+      "id": "LAM",
+      "name": "Lamentations",
+      "nameLong": "The Lamentations of Jeremiah",
+      "abbreviation": "Lam"
+    },
+    {
+      "id": "EZK",
+      "name": "Ezekiel",
+      "nameLong": "The Book of the Prophet Ezekiel",
+      "abbreviation": "Ezk"
+    },
+    {
+      "id": "DAN",
+      "name": "Daniel",
+      "nameLong": "The Book of Daniel",
+      "abbreviation": "Dan"
+    },
+    {
+      "id": "HOS",
+      "name": "Hosea",
+      "nameLong": "Hosea",
+      "abbreviation": "Hos"
+    },
+    {
+      "id": "JOL",
+      "name": "Joel",
+      "nameLong": "Joel",
+      "abbreviation": "Jol"
+    },
+    {
+      "id": "AMO",
+      "name": "Amos",
+      "nameLong": "Amos",
+      "abbreviation": "Amo"
+    },
+    {
+      "id": "OBA",
+      "name": "Obadiah",
+      "nameLong": "Obadiah",
+      "abbreviation": "Oba"
+    },
+    {
+      "id": "JON",
+      "name": "Jonah",
+      "nameLong": "Jonah",
+      "abbreviation": "Jon"
+    },
+    {
+      "id": "MIC",
+      "name": "Micah",
+      "nameLong": "Micah",
+      "abbreviation": "Mic"
+    },
+    {
+      "id": "NAM",
+      "name": "Nahum",
+      "nameLong": "Nahum",
+      "abbreviation": "Nam"
+    },
+    {
+      "id": "HAB",
+      "name": "Habakkuk",
+      "nameLong": "Habakkuk",
+      "abbreviation": "Hab"
+    },
+    {
+      "id": "ZEP",
+      "name": "Zephaniah",
+      "nameLong": "Zephaniah",
+      "abbreviation": "Zep"
+    },
+    {
+      "id": "HAG",
+      "name": "Haggai",
+      "nameLong": "Haggai",
+      "abbreviation": "Hag"
+    },
+    {
+      "id": "ZEC",
+      "name": "Zechariah",
+      "nameLong": "Zechariah",
+      "abbreviation": "Zec"
+    },
+    {
+      "id": "MAL",
+      "name": "Malachi",
+      "nameLong": "Malachi",
+      "abbreviation": "Mal"
+    },
+    {
+      "id": "MAT",
+      "name": "Matthew",
+      "nameLong": "THE GOSPEL ACCORDING TO ST. MATTHEW",
+      "abbreviation": "Mat"
+    },
+    {
+      "id": "MRK",
+      "name": "Mark",
+      "nameLong": "THE GOSPEL ACCORDING TO ST. MARK",
+      "abbreviation": "Mrk"
+    },
+    {
+      "id": "LUK",
+      "name": "Luke",
+      "nameLong": "THE GOSPEL ACCORDING TO ST. LUKE",
+      "abbreviation": "Luk"
+    },
+    {
+      "id": "JHN",
+      "name": "John",
+      "nameLong": "THE GOSPEL ACCORDING TO ST. JOHN",
+      "abbreviation": "Jhn"
+    },
+    {
+      "id": "ACT",
+      "name": "Acts",
+      "nameLong": "THE ACTS OF THE APOSTLES",
+      "abbreviation": "Act"
+    },
+    {
+      "id": "ROM",
+      "name": "Romans",
+      "nameLong": "THE EPISTLE OF PAUL THE APOSTLE TO THE ROMANS",
+      "abbreviation": "Rom"
+    },
+    {
+      "id": "1CO",
+      "name": "1 Corinthians",
+      "nameLong": "THE FIRST EPISTLE OF PAUL THE APOSTLE TO THE CORINTHIANS",
+      "abbreviation": "1Co"
+    },
+    {
+      "id": "2CO",
+      "name": "2 Corinthians",
+      "nameLong": "THE SECOND EPISTLE OF PAUL THE APOSTLE TO THE CORINTHIANS",
+      "abbreviation": "2Co"
+    },
+    {
+      "id": "GAL",
+      "name": "Galatians",
+      "nameLong": "THE EPISTLE OF PAUL THE APOSTLE TO THE GALATIANS",
+      "abbreviation": "Gal"
+    },
+    {
+      "id": "EPH",
+      "name": "Ephesians",
+      "nameLong": "THE EPISTLE OF PAUL THE APOSTLE TO THE EPHESIANS",
+      "abbreviation": "Eph"
+    },
+    {
+      "id": "PHP",
+      "name": "Philippians",
+      "nameLong": "THE EPISTLE OF PAUL THE APOSTLE TO THE PHILIPPIANS",
+      "abbreviation": "Php"
+    },
+    {
+      "id": "COL",
+      "name": "Colossians",
+      "nameLong": "THE EPISTLE OF PAUL THE APOSTLE TO THE COLOSSIANS",
+      "abbreviation": "Col"
+    },
+    {
+      "id": "1TH",
+      "name": "1 Thessalonians",
+      "nameLong": "THE FIRST EPISTLE OF PAUL THE APOSTLE TO THE THESSALONIANS",
+      "abbreviation": "1Th"
+    },
+    {
+      "id": "2TH",
+      "name": "2 Thessalonians",
+      "nameLong": "THE SECOND EPISTLE OF PAUL THE APOSTLE TO THE THESSALONIANS",
+      "abbreviation": "2Th"
+    },
+    {
+      "id": "1TI",
+      "name": "1 Timothy",
+      "nameLong": "THE FIRST EPISTLE OF PAUL THE APOSTLE TO TIMOTHY",
+      "abbreviation": "1Ti"
+    },
+    {
+      "id": "2TI",
+      "name": "2 Timothy",
+      "nameLong": "THE SECOND EPISTLE OF PAUL THE APOSTLE TO TIMOTHY",
+      "abbreviation": "2Ti"
+    },
+    {
+      "id": "TIT",
+      "name": "Titus",
+      "nameLong": "THE EPISTLE OF PAUL THE APOSTLE TO TITUS",
+      "abbreviation": "Tit"
+    },
+    {
+      "id": "PHM",
+      "name": "Philemon",
+      "nameLong": "THE EPISTLE OF PAUL THE APOSTLE TO PHILEMON",
+      "abbreviation": "Phm"
+    },
+    {
+      "id": "HEB",
+      "name": "Hebrews",
+      "nameLong": "THE EPISTLE OF PAUL THE APOSTLE TO THE HEBREWS",
+      "abbreviation": "Heb"
+    },
+    {
+      "id": "JAS",
+      "name": "James",
+      "nameLong": "THE GENERAL EPISTLE OF JAMES",
+      "abbreviation": "Jas"
+    },
+    {
+      "id": "1PE",
+      "name": "1 Peter",
+      "nameLong": "THE FIRST EPISTLE GENERAL OF PETER",
+      "abbreviation": "1Pe"
+    },
+    {
+      "id": "2PE",
+      "name": "2 Peter",
+      "nameLong": "THE SECOND EPISTLE GENERAL OF PETER",
+      "abbreviation": "2Pe"
+    },
+    {
+      "id": "1JN",
+      "name": "1 John",
+      "nameLong": "THE FIRST EPISTLE GENERAL OF JOHN",
+      "abbreviation": "1Jn"
+    },
+    {
+      "id": "2JN",
+      "name": "2 John",
+      "nameLong": "THE SECOND EPISTLE OF JOHN",
+      "abbreviation": "2Jn"
+    },
+    {
+      "id": "3JN",
+      "name": "3 John",
+      "nameLong": "THE THIRD EPISTLE OF JOHN",
+      "abbreviation": "3Jn"
+    },
+    {
+      "id": "JUD",
+      "name": "Jude",
+      "nameLong": "THE GENERAL EPISTLE OF JUDE",
+      "abbreviation": "Jud"
+    },
+    {
+      "id": "REV",
+      "name": "Revelation",
+      "nameLong": "THE REVELATION OF ST. JOHN THE DIVINE",
+      "abbreviation": "Rev"
+    }
+  ]
+}

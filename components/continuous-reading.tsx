@@ -40,7 +40,10 @@ export function ContinuousReadingExperience() {
   const loadingNextRef = useRef(false);
   const loadingPrevRef = useRef(false);
   const prevScrollHeightRef = useRef<number | null>(null);
-  // While locked, the IntersectionObserver won't overwrite the explicitly-selected chapter.
+  // Tracks the most-recently-reported visible chapter id, used to avoid spamming
+  // setState on every scroll frame.
+  const lastVisibleRef = useRef<string>("");
+  // While locked, scroll-driven chapter detection won't overwrite the explicitly-selected chapter.
   // This is what prevents the "jumps to chapter 2" bug after a manual selection.
   const scrollLockedRef = useRef(false);
 
@@ -68,14 +71,20 @@ export function ContinuousReadingExperience() {
     return () => document.removeEventListener("mousedown", onDown);
   }, [transDropdownOpen]);
 
-  // -------- Infinite scroll (window is the scroller) --------
+  // -------- Scroll handler: infinite scroll + current-chapter detection --------
+  // We do BOTH in the same listener so we don't fight an IntersectionObserver.
+  // The "current chapter" is the last chapter whose top edge has scrolled past
+  // the header offset; this is rock-solid across viewport sizes / chapter lengths.
   useEffect(() => {
+    const HEADER_OFFSET = 110; // sticky header (~56) + banner (~50)
+
     const handleScroll = () => {
       const scrollTop = window.scrollY;
       const viewportH = window.innerHeight;
       const docH = document.documentElement.scrollHeight;
       const distFromBottom = docH - (scrollTop + viewportH);
 
+      // Infinite scroll — forward
       if (distFromBottom < viewportH * 1.0 && hasMoreNext && !loadingNextRef.current) {
         loadingNextRef.current = true;
         loadNextChapters(2).finally(() => {
@@ -83,6 +92,7 @@ export function ContinuousReadingExperience() {
         });
       }
 
+      // Infinite scroll — backward
       if (scrollTop < viewportH * 0.5 && hasMorePrevious && !loadingPrevRef.current) {
         loadingPrevRef.current = true;
         prevScrollHeightRef.current = document.documentElement.scrollHeight;
@@ -90,12 +100,44 @@ export function ContinuousReadingExperience() {
           loadingPrevRef.current = false;
         });
       }
+
+      // Current chapter detection (skipped while a programmatic scroll is settling)
+      if (!scrollLockedRef.current && chapterRefs.current.size > 0) {
+        let currentId = "";
+        let currentBookId = "";
+        // Map preserves insertion order = DOM order of loadedChapters.
+        for (const [id, el] of chapterRefs.current) {
+          const top = el.getBoundingClientRect().top;
+          if (top <= HEADER_OFFSET) {
+            currentId = id;
+            currentBookId = el.dataset.bookId || "";
+          } else {
+            // Subsequent chapters are below; stop scanning.
+            break;
+          }
+        }
+        // If nothing is above the offset yet (very top of doc), use the first chapter.
+        if (!currentId) {
+          const firstEntry = chapterRefs.current.entries().next().value as
+            | [string, HTMLDivElement]
+            | undefined;
+          if (firstEntry) {
+            currentId = firstEntry[0];
+            currentBookId = firstEntry[1].dataset.bookId || "";
+          }
+        }
+        if (currentId && currentId !== lastVisibleRef.current) {
+          lastVisibleRef.current = currentId;
+          setVisibleChapter(currentBookId, currentId);
+          setVisibleChapterId(currentId);
+        }
+      }
     };
 
     window.addEventListener("scroll", handleScroll, { passive: true });
     handleScroll();
     return () => window.removeEventListener("scroll", handleScroll);
-  }, [hasMoreNext, hasMorePrevious, loadNextChapters, loadPreviousChapters]);
+  }, [hasMoreNext, hasMorePrevious, loadNextChapters, loadPreviousChapters, setVisibleChapter]);
 
   // -------- Preserve scroll position when prepending previous chapters --------
   useLayoutEffect(() => {
@@ -111,8 +153,10 @@ export function ContinuousReadingExperience() {
     const target = chapterRefs.current.get(pendingScrollTo);
     if (!target) return;
 
-    // Lock the observer so it can't overwrite our explicit selection during the scroll animation.
+    // Lock the scroll-detection so it can't overwrite our explicit selection during the scroll animation.
     scrollLockedRef.current = true;
+    lastVisibleRef.current = pendingScrollTo;
+    setVisibleChapterId(pendingScrollTo);
     const rect = target.getBoundingClientRect();
     const top = rect.top + window.scrollY - 70;
     window.scrollTo({ top, behavior: "auto" });
@@ -124,37 +168,7 @@ export function ContinuousReadingExperience() {
     return () => window.clearTimeout(timer);
   }, [pendingScrollTo, loadedChapters, clearPendingScroll]);
 
-  // -------- Observe currently visible chapter (sync selector with scroll) --------
-  useEffect(() => {
-    if (loadedChapters.length === 0) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (scrollLockedRef.current) return;
-        const visible = entries
-          .filter((e) => e.isIntersecting)
-          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
-        if (!visible) return;
-        const el = visible.target as HTMLElement;
-        const bookId = el.dataset.bookId;
-        const chapterId = el.dataset.chapterId;
-        if (bookId && chapterId) {
-          setVisibleChapter(bookId, chapterId);
-          setVisibleChapterId(chapterId);
-        }
-      },
-      {
-        root: null,
-        rootMargin: "-70px 0px -70% 0px",
-        threshold: 0,
-      }
-    );
-
-    chapterRefs.current.forEach((el) => observer.observe(el));
-    return () => observer.disconnect();
-  }, [loadedChapters, setVisibleChapter]);
-
-  // Keep the visible-chapter id seeded after a manual jump so the banner shows immediately.
+  // Seed the visible-chapter id after a manual jump so the banner shows immediately.
   useEffect(() => {
     if (selectedChapterId && !visibleChapterId) setVisibleChapterId(selectedChapterId);
   }, [selectedChapterId, visibleChapterId]);
@@ -351,14 +365,15 @@ export function ContinuousReadingExperience() {
               data-chapter-id={chapter.id}
               className="continuous-chapter"
             >
-              {/* Always-in-DOM heading. Visually hidden on desktop (banner covers it),
-                  shown as a small inline label on touch devices so readers see
-                  chapter boundaries while swiping/scrolling. */}
+              {/* Always-in-DOM heading for screen readers. Visible chapter
+                  divider below it provides the in-prose boundary indicator. */}
               <h2 className="chapter-anchor-label">
                 {chapter.bookName} {chapter.chapterNumber}
               </h2>
-              <div className="chapter-inline-touch" aria-hidden="true">
-                {chapter.bookName} {chapter.chapterNumber}
+              <div className="chapter-divider" aria-hidden="true">
+                <span className="chapter-divider-label">
+                  {chapter.bookName} {chapter.chapterNumber}
+                </span>
               </div>
               <div className="reading-mode-content">
                 <div
