@@ -76,7 +76,7 @@ export function ContinuousReadingExperience() {
   // The "current chapter" is the last chapter whose top edge has scrolled past
   // the header offset; this is rock-solid across viewport sizes / chapter lengths.
   useEffect(() => {
-    const HEADER_OFFSET = 110; // sticky header (~56) + banner (~50)
+    const HEADER_OFFSET = 64; // sticky header only (banner removed)
 
     const handleScroll = () => {
       const scrollTop = window.scrollY;
@@ -332,13 +332,6 @@ export function ContinuousReadingExperience() {
           </Link>
         </nav>
       </div>
-
-      {/* STICKY CHAPTER BANNER (floats below the header, follows scroll) */}
-      {bannerLabel && (
-        <div className="chapter-banner" aria-live="polite">
-          <span className="chapter-banner-label">{bannerLabel}</span>
-        </div>
-      )}
 
       {/* SCROLLABLE CONTENT (window is the scroller) */}
       <div className="scrollable-content-area">

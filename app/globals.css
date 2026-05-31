@@ -2467,7 +2467,7 @@ button {
 
 .experience-shell--reading .continuous-chapter {
   margin-bottom: 2.5rem;
-  scroll-margin-top: 110px; /* header + banner */
+  scroll-margin-top: 64px; /* header only */
 }
 
 .experience-shell--reading .chapter-html-content {
