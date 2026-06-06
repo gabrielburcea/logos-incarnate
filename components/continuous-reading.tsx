@@ -4,6 +4,14 @@ import React, { useEffect, useLayoutEffect, useRef, useState, useMemo } from "re
 import Link from "next/link";
 import { useContinuousBible } from "@/lib/hooks/use-continuous-bible";
 import { bibleAPI, Book, Chapter } from "@/lib/services/bible-api";
+import {
+  getAlignment,
+  getHebrewLexicon,
+  getGreekLexicon,
+  type VerseAlignment,
+} from "@/lib/services/meaning-api";
+import { wrapMeaningWords } from "@/lib/services/wrap-meaning-words";
+import { MeaningPopover } from "@/components/meaning-popover";
 
 export function ContinuousReadingExperience() {
   const {
@@ -172,6 +180,83 @@ export function ContinuousReadingExperience() {
   useEffect(() => {
     if (selectedChapterId && !visibleChapterId) setVisibleChapterId(selectedChapterId);
   }, [selectedChapterId, visibleChapterId]);
+
+  // -------- Meaning data: lexicons + alignment --------
+  // Loaded once per session. The alignment file (~9 MB) is fetched on first
+  // chapter render, then stays in cache for the life of the page.
+  const [alignment, setAlignment] = useState<Record<string, VerseAlignment> | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([getAlignment("KJV"), getHebrewLexicon(), getGreekLexicon()])
+      .then(([align]) => {
+        if (cancelled) return;
+        setAlignment(align);
+      })
+      .catch((err) => {
+        // Non-fatal: ⓘ icons just won't appear if meaning data fails to load.
+        console.warn("Meaning data failed to load:", err);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Wrap meaning-tagged words after each chapter renders. We use a ref-callback
+  // pattern: when a chapter div mounts, we run the walker on it once.
+  const wrappedChaptersRef = useRef<Set<string>>(new Set());
+
+  // When the translation changes, the rendered HTML changes; clear the
+  // wrap-cache so the new chapters re-wrap.
+  useEffect(() => {
+    wrappedChaptersRef.current = new Set();
+  }, [selectedBibleId]);
+
+  useEffect(() => {
+    if (!alignment) return;
+    for (const chapter of loadedChapters) {
+      if (wrappedChaptersRef.current.has(chapter.id)) continue;
+      const el = chapterRefs.current.get(chapter.id);
+      if (!el) continue;
+      const htmlEl = el.querySelector<HTMLDivElement>(".chapter-html-content");
+      if (!htmlEl) continue;
+      try {
+        wrapMeaningWords({
+          container: htmlEl,
+          bookId: chapter.bookId,
+          chapterNumber: chapter.chapterNumber,
+          alignment,
+        });
+        wrappedChaptersRef.current.add(chapter.id);
+      } catch (err) {
+        console.warn("Failed to wrap meaning words for", chapter.id, err);
+      }
+    }
+  }, [loadedChapters, alignment]);
+
+  // -------- Meaning popover state --------
+  const [popover, setPopover] = useState<{
+    strongs: string;
+    word: string;
+    anchor: HTMLElement;
+  } | null>(null);
+
+  // Delegated click handler on the reading column. Catches clicks on any
+  // .meaning-anchor (or its info icon) and opens the popover.
+  useEffect(() => {
+    const onClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      const anchor = target.closest<HTMLElement>(".meaning-anchor");
+      if (!anchor) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const strongs = anchor.dataset.strongs;
+      const word = anchor.dataset.word;
+      if (!strongs || !word) return;
+      setPopover({ strongs, word, anchor });
+    };
+    document.addEventListener("click", onClick);
+    return () => document.removeEventListener("click", onClick);
+  }, []);
 
   const registerChapterRef = (id: string) => (el: HTMLDivElement | null) => {
     if (el) chapterRefs.current.set(id, el);
@@ -397,6 +482,15 @@ export function ContinuousReadingExperience() {
           selectedChapterId={selectedChapterId}
           onClose={() => setPickerOpen(false)}
           onPickChapter={handlePickChapter}
+        />
+      )}
+
+      {popover && (
+        <MeaningPopover
+          strongs={popover.strongs}
+          englishWord={popover.word}
+          anchorEl={popover.anchor}
+          onClose={() => setPopover(null)}
         />
       )}
     </main>
