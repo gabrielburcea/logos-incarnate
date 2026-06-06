@@ -40,11 +40,66 @@ interface WrapMeaningWordsArgs {
   alignment: Record<string, VerseAlignment>;
 }
 
-/** Words we never wrap — particles, punctuation, etc. that have no original. */
+/**
+ * Words we NEVER wrap, regardless of whether they have a Strong's number
+ * in the alignment data. The KJV alignment marks function words like
+ * "the", "of", "is", etc. with Strong's codes (often H853 / H1961 / etc.)
+ * — but tagging every one of those would drown the reader in noise.
+ *
+ * Strategy: filter aggressively to function words. Content words pass
+ * through. Result: roughly 3–5 anchors per verse instead of 30.
+ */
 const SKIP_WORDS: Set<string> = new Set([
-  // Pure-English helpers added by translators that aren't in the Hebrew/Greek.
-  // (Most translator additions ARE actually mapped to a Hebrew/Greek word in
-  // the alignment, so this list is intentionally tiny.)
+  // Articles
+  "a", "an", "the",
+  // Copulas + archaic forms (KJV uses "art / wast / wert")
+  "am", "is", "are", "was", "were", "be", "been", "being",
+  "art", "wast", "wert",
+  // Auxiliaries / modals + archaic forms
+  "have", "has", "had", "do", "does", "did", "doing", "done",
+  "hast", "hath", "doth", "didst",
+  "shall", "will", "would", "should", "could", "may", "might",
+  "can", "must", "ought",
+  "shalt", "wilt", "shouldst", "wouldst", "couldst",
+  "mayst", "mightst", "canst",
+  // Pronouns (subject + object + possessive + reflexive)
+  "i", "you", "he", "she", "it", "we", "they",
+  "me", "him", "her", "us", "them",
+  "my", "your", "his", "its", "our", "their",
+  "mine", "yours", "hers", "ours", "theirs",
+  "myself", "yourself", "himself", "herself", "itself",
+  "ourselves", "yourselves", "themselves",
+  // Demonstratives + interrogatives
+  "this", "that", "these", "those",
+  "who", "whom", "whose", "which", "what",
+  // Archaic pronouns (KJV)
+  "thou", "thee", "thy", "thine", "ye", "thyself",
+  // Prepositions
+  "of", "in", "on", "at", "by", "to", "from", "for", "with",
+  "into", "onto", "upon", "unto", "out", "off",
+  "through", "throughout", "over", "under",
+  "above", "below", "before", "after",
+  "between", "among", "amongst", "against",
+  "without", "within", "about", "around", "across", "behind",
+  "beside", "beyond", "during",
+  // Conjunctions
+  "and", "or", "but", "so", "yet", "nor",
+  "if", "as", "because", "when", "while", "whilst",
+  "then", "than", "though", "although",
+  "since", "until", "till", "unless",
+  "where", "wherein", "whereby", "whence", "whither",
+  // Negation
+  "no", "not", "none", "nay", "never",
+  // Quantifiers / determiners
+  "all", "any", "some", "many", "much", "more", "most",
+  "few", "less", "least",
+  "every", "each", "both", "either", "neither",
+  "one", "two", "three",
+  // Misc fillers / interjections / KJV particles
+  "there", "here",
+  "also", "only", "just", "even", "very", "ever",
+  "again", "always", "now", "often", "sometimes",
+  "yea", "behold", "lo", "oh", "oft",
 ]);
 
 /** Returns true if the node belongs to a footnote / cross-reference / chapter num. */
@@ -182,19 +237,15 @@ function tagTextNode(
       }
       const codes = verseAlignment[lower];
       if (codes && codes.length > 0) {
+        // Wrap the word in an INVISIBLE anchor span. No icon, no underline,
+        // no color shift — visually indistinguishable from surrounding text.
+        // The popover is triggered by hover (cursor pause) or tap.
         const wrap = document.createElement("span");
         wrap.className = "meaning-anchor";
         wrap.dataset.strongs = codes[0];
         wrap.dataset.word = part;
         wrap.dataset.verse = verseRef;
         wrap.textContent = part;
-        // The info icon — placed as a sup so it sits at upper-right of the
-        // word without disturbing the line height.
-        const icon = document.createElement("sup");
-        icon.className = "meaning-info-icon";
-        icon.textContent = "i";
-        icon.setAttribute("aria-hidden", "true");
-        wrap.appendChild(icon);
         fragment.appendChild(wrap);
         didTag = true;
       } else {

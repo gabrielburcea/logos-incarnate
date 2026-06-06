@@ -2624,50 +2624,15 @@ button {
 }
 
 /* ─────────────────────────────────────────────────────────────────
-   Meaning anchors — the inline ⓘ on translatable English words.
-   The anchor wraps the word; the icon sits at upper-right as a sup.
+   Meaning anchors — invisible spans wrapping translatable words.
+   Triggered by hover (cursor pause, ~250 ms) or tap. There is NO
+   visual hint at rest — words look identical to surrounding text.
+   `cursor: pointer` is the only desktop hint; on touch devices there
+   is none. Gentle on the eye is the whole point.
    ───────────────────────────────────────────────────────────────── */
 
 .meaning-anchor {
-  position: relative;
   cursor: pointer;
-  /* Match the surrounding text exactly — no underline, no colour shift,
-     unless the user is hovering. */
-  color: inherit;
-  text-decoration: none;
-}
-
-.meaning-anchor:hover {
-  /* Subtle hover hint that the word is interactive. */
-  background: color-mix(in oklab, var(--read-ink) 8%, transparent);
-  border-radius: 2px;
-}
-
-.meaning-info-icon {
-  display: inline-block;
-  margin-left: 1px;
-  font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
-  font-size: 0.55em;
-  font-style: italic;
-  font-weight: 500;
-  /* `top` is set automatically by the <sup> tag, but tighten so the icon
-     sits closer to the word and doesn't push the line height. */
-  top: -0.6em;
-  vertical-align: super;
-  line-height: 1;
-  color: color-mix(in oklab, var(--read-ink) 45%, transparent);
-  border: 1px solid currentColor;
-  border-radius: 50%;
-  width: 0.95em;
-  height: 0.95em;
-  text-align: center;
-  padding: 0 0 0 0.04em;
-  user-select: none;
-  transition: color 120ms ease;
-}
-
-.meaning-anchor:hover .meaning-info-icon {
-  color: var(--read-ink);
 }
 
 /* ─────────────────────────────────────────────────────────────────

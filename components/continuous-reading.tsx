@@ -201,24 +201,21 @@ export function ContinuousReadingExperience() {
     };
   }, []);
 
-  // Wrap meaning-tagged words after each chapter renders. We use a ref-callback
-  // pattern: when a chapter div mounts, we run the walker on it once.
-  const wrappedChaptersRef = useRef<Set<string>>(new Set());
-
-  // When the translation changes, the rendered HTML changes; clear the
-  // wrap-cache so the new chapters re-wrap.
-  useEffect(() => {
-    wrappedChaptersRef.current = new Set();
-  }, [selectedBibleId]);
-
+  // Wrap meaning-tagged words after each chapter renders.
+  //
+  // We DO NOT cache by chapter id — React occasionally re-applies
+  // dangerouslySetInnerHTML and wipes our wraps. Instead, the DOM itself
+  // is the cache: if `.meaning-anchor` already exists in the chapter HTML,
+  // skip; otherwise wrap. This auto-heals across re-renders.
   useEffect(() => {
     if (!alignment) return;
     for (const chapter of loadedChapters) {
-      if (wrappedChaptersRef.current.has(chapter.id)) continue;
       const el = chapterRefs.current.get(chapter.id);
       if (!el) continue;
       const htmlEl = el.querySelector<HTMLDivElement>(".chapter-html-content");
       if (!htmlEl) continue;
+      // DOM-presence check (self-healing cache).
+      if (htmlEl.querySelector(".meaning-anchor")) continue;
       try {
         wrapMeaningWords({
           container: htmlEl,
@@ -226,12 +223,11 @@ export function ContinuousReadingExperience() {
           chapterNumber: chapter.chapterNumber,
           alignment,
         });
-        wrappedChaptersRef.current.add(chapter.id);
       } catch (err) {
         console.warn("Failed to wrap meaning words for", chapter.id, err);
       }
     }
-  }, [loadedChapters, alignment]);
+  }, [loadedChapters, alignment, selectedBibleId]);
 
   // -------- Meaning popover state --------
   const [popover, setPopover] = useState<{
@@ -240,22 +236,147 @@ export function ContinuousReadingExperience() {
     anchor: HTMLElement;
   } | null>(null);
 
-  // Delegated click handler on the reading column. Catches clicks on any
-  // .meaning-anchor (or its info icon) and opens the popover.
+  // Mirror state into a ref so the (stable) document listeners can read the
+  // current popover without re-binding on every state change.
+  const popoverRef = useRef(popover);
   useEffect(() => {
-    const onClick = (e: MouseEvent) => {
+    popoverRef.current = popover;
+  }, [popover]);
+
+  // Combined hover + tap handler model:
+  //
+  //   Desktop / mouse:
+  //     - cursor over a tagged word for 250 ms        → open
+  //     - cursor leaves word AND popover for 350 ms   → close
+  //     - cursor moves between word and popover       → stays open
+  //     - cursor moves to a different tagged word     → instant switch
+  //
+  //   Touch / Apple Pencil / explicit click:
+  //     - tap a word                                  → instant open
+  //     - tap the popover surface                     → close
+  //     - tap outside both                            → close
+  //     - tap the same word again                     → close (toggle)
+  //
+  //   Keyboard:
+  //     - Escape                                      → close (handled in popover)
+  useEffect(() => {
+    const HOVER_OPEN_MS = 250;
+    const HOVER_CLOSE_MS = 350;
+    let openTimer: ReturnType<typeof setTimeout> | null = null;
+    let closeTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const cancelOpen = () => {
+      if (openTimer) {
+        clearTimeout(openTimer);
+        openTimer = null;
+      }
+    };
+    const cancelClose = () => {
+      if (closeTimer) {
+        clearTimeout(closeTimer);
+        closeTimer = null;
+      }
+    };
+
+    const onPointerOver = (e: PointerEvent) => {
+      // Touch is handled by the click listener (taps fire click, not hover).
+      if (e.pointerType === "touch") return;
       const target = e.target as HTMLElement;
       const anchor = target.closest<HTMLElement>(".meaning-anchor");
-      if (!anchor) return;
-      e.preventDefault();
-      e.stopPropagation();
-      const strongs = anchor.dataset.strongs;
-      const word = anchor.dataset.word;
-      if (!strongs || !word) return;
-      setPopover({ strongs, word, anchor });
+      const inPopover = target.closest("[data-meaning-popover]");
+
+      if (anchor) {
+        cancelClose();
+        // Already showing for this word? Just keep it.
+        if (popoverRef.current?.anchor === anchor) {
+          cancelOpen();
+          return;
+        }
+        cancelOpen();
+        openTimer = setTimeout(() => {
+          openTimer = null;
+          const strongs = anchor.dataset.strongs;
+          const word = anchor.dataset.word;
+          if (strongs && word) setPopover({ strongs, word, anchor });
+        }, HOVER_OPEN_MS);
+        return;
+      }
+
+      // Cursor entered the popover — keep it open.
+      if (inPopover) {
+        cancelClose();
+        return;
+      }
     };
+
+    const onPointerOut = (e: PointerEvent) => {
+      if (e.pointerType === "touch") return;
+      const target = e.target as HTMLElement;
+      const related = e.relatedTarget as HTMLElement | null;
+      const leftAnchor = target.closest(".meaning-anchor");
+      const leftPopover = target.closest("[data-meaning-popover]");
+      if (!leftAnchor && !leftPopover) return;
+
+      // If we moved INTO another anchor or the popover, don't close.
+      const movedTo = related?.closest(
+        ".meaning-anchor, [data-meaning-popover]",
+      );
+      if (movedTo) return;
+
+      cancelOpen();
+      if (closeTimer) return;
+      closeTimer = setTimeout(() => {
+        closeTimer = null;
+        setPopover(null);
+      }, HOVER_CLOSE_MS);
+    };
+
+    const onClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      const inPopover = target.closest("[data-meaning-popover]");
+
+      // Tap anywhere on the popover surface (including its × button) → close.
+      if (inPopover) {
+        cancelOpen();
+        cancelClose();
+        setPopover(null);
+        return;
+      }
+
+      const anchor = target.closest<HTMLElement>(".meaning-anchor");
+      if (anchor) {
+        e.preventDefault();
+        e.stopPropagation();
+        cancelOpen();
+        cancelClose();
+        const strongs = anchor.dataset.strongs;
+        const word = anchor.dataset.word;
+        if (!strongs || !word) return;
+        // Toggle behaviour: tap the same word twice → close.
+        setPopover((cur) =>
+          cur && cur.anchor === anchor ? null : { strongs, word, anchor },
+        );
+        return;
+      }
+
+      // Tap outside both the popover and any anchor → close.
+      if (popoverRef.current) {
+        cancelOpen();
+        cancelClose();
+        setPopover(null);
+      }
+    };
+
+    document.addEventListener("pointerover", onPointerOver);
+    document.addEventListener("pointerout", onPointerOut);
     document.addEventListener("click", onClick);
-    return () => document.removeEventListener("click", onClick);
+    return () => {
+      cancelOpen();
+      cancelClose();
+      document.removeEventListener("pointerover", onPointerOver);
+      document.removeEventListener("pointerout", onPointerOut);
+      document.removeEventListener("click", onClick);
+    };
   }, []);
 
   const registerChapterRef = (id: string) => (el: HTMLDivElement | null) => {

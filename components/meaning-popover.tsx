@@ -109,23 +109,15 @@ export function MeaningPopover({
     return () => window.clearTimeout(timer);
   }, [anchorEl, entry, loading]);
 
-  // Close on outside click / Escape.
+  // Escape closes the popover. Outside-click dismissal is owned by the
+  // parent `ContinuousReadingExperience`, which also handles hover-close
+  // and tap-on-popover-to-close \u2014 we keep this component listener-light.
   useEffect(() => {
-    const onDocClick = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      if (target.closest("[data-meaning-popover]")) return;
-      if (target.closest(".meaning-anchor")) return; // clicking another ⓘ handled elsewhere
-      onClose();
-    };
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
-    document.addEventListener("mousedown", onDocClick);
     document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onDocClick);
-      document.removeEventListener("keydown", onKey);
-    };
+    return () => document.removeEventListener("keydown", onKey);
   }, [onClose]);
 
   if (!anchorEl) return null;
