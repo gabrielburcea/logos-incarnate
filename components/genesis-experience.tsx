@@ -15,11 +15,6 @@ import { parseHTMLToVerses } from "@/lib/services/verse-parser"; //
 type SurfaceMode = "reading" | "study";
 type ToolMode = "pen" | "marker" | "eraser";
 
-type Position = {
-  x: number;
-  y: number;
-};
-
 type VerseAnnotation = {
   underlinedWordIndexes?: number[];
   underlinedWordColors?: Record<number, string>;
@@ -49,20 +44,6 @@ const MAIN_COLORS = [
   "#00c2ff",
   "#2f6fed",
 ];
-
-const EXTRA_COLORS = [
-  "#39ff14",
-  "#b026ff",
-  "#ff1493",
-  "#111111",
-  "#6f4e37",
-];
-
-function toSafeToolMode(raw: unknown): ToolMode {
-  if (raw === "marker") return "marker";
-  if (raw === "eraser") return "eraser";
-  return "pen";
-}
 
 function toSafeAnnotationState(raw: unknown): AnnotationState {
   if (!raw || typeof raw !== "object") {
@@ -142,8 +123,6 @@ export function GenesisExperience({ surface }: { surface: SurfaceMode }) {
     loading,
     error,
     selectBible,
-    selectBook,
-    selectChapter,
   } = useBible();
 
   const verses = React.useMemo(() => {
@@ -165,10 +144,6 @@ export function GenesisExperience({ surface }: { surface: SurfaceMode }) {
   const [hasLoadedAnnotations, setHasLoadedAnnotations] = useState(false);
   const [toolMode, setToolMode] = useState<ToolMode>(DEFAULT_TOOL_MODE);
   const [underlineColor, setUnderlineColor] = useState<string>(DEFAULT_UNDERLINE_COLOR);
-  const [toolbarPosition, setToolbarPosition] = useState<Position>({ x: 20, y: 100 });
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragOffset, setDragOffset] = useState<Position>({ x: 0, y: 0 });
-  const toolbarRef = useRef<HTMLDivElement>(null);
   const [isAnnotating, setIsAnnotating] = useState(false);
   const [annotatingVerse, setAnnotatingVerse] = useState<number | null>(null);
   const [showMeaningModal, setShowMeaningModal] = useState(false);
@@ -313,7 +288,7 @@ export function GenesisExperience({ surface }: { surface: SurfaceMode }) {
     });
   }
 
-  function handleWordClick(verseNumber: number, wordIndex: number) {
+  function handleWordClick(verseNumber: number) {
     // Open meaning modal (doesn't affect annotations)
     selectVerse(verseNumber);
     setShowMeaningModal(true);
@@ -369,40 +344,6 @@ export function GenesisExperience({ surface }: { surface: SurfaceMode }) {
     return annotation.underlinedWordTools?.[index] ?? DEFAULT_TOOL_MODE;
   }
 
-  function handleMouseDown(event: React.MouseEvent<HTMLDivElement>) {
-    if (!toolbarRef.current) return;
-    
-    const rect = toolbarRef.current.getBoundingClientRect();
-    setDragOffset({
-      x: event.clientX - rect.left,
-      y: event.clientY - rect.top,
-    });
-    setIsDragging(true);
-  }
-
-  useEffect(() => {
-    if (!isDragging) return;
-
-    function handleMouseMove(event: MouseEvent) {
-      setToolbarPosition({
-        x: event.clientX - dragOffset.x,
-        y: event.clientY - dragOffset.y,
-      });
-    }
-
-    function handleMouseUp() {
-      setIsDragging(false);
-    }
-
-    document.addEventListener("mousemove", handleMouseMove);
-    document.addEventListener("mouseup", handleMouseUp);
-
-    return () => {
-      document.removeEventListener("mousemove", handleMouseMove);
-      document.removeEventListener("mouseup", handleMouseUp);
-    };
-  }, [isDragging, dragOffset]);
-
   function renderVerseText(verseNumber: number, verseText: string, annotation: VerseAnnotation) {
     const words = verseText.split(" ");
     const annotated = new Set(annotation.underlinedWordIndexes ?? []);
@@ -457,7 +398,7 @@ export function GenesisExperience({ surface }: { surface: SurfaceMode }) {
                   if (!isAnnotating) {
                     event.preventDefault();
                     event.stopPropagation();
-                    handleWordClick(verseNumber, index);
+                    handleWordClick(verseNumber);
                   }
                 }}
                 aria-pressed={isAnnotated}

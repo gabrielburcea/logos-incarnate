@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useLayoutEffect, useRef, useState, useMemo } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, useMemo } from "react";
 import Link from "next/link";
 import { useContinuousBible } from "@/lib/hooks/use-continuous-bible";
 import { bibleAPI, Book, Chapter } from "@/lib/services/bible-api";
@@ -28,7 +28,6 @@ export function ContinuousReadingExperience() {
     hasMorePrevious,
     pendingScrollTo,
     selectBible,
-    selectChapter,
     jumpToChapter,
     loadNextChapters,
     loadPreviousChapters,
@@ -397,8 +396,6 @@ export function ContinuousReadingExperience() {
       ? currentBook.nameLong
       : currentBook.name
     : "";
-  const currentChapterNumber =
-    chapters.find((c) => c.id === selectedChapterId)?.number || "";
   const currentTranslationAbbr =
     bibles.find((b) => b.id === selectedBibleId)?.abbreviation || "";
 
@@ -411,9 +408,6 @@ export function ContinuousReadingExperience() {
     loadedChapters[0];
   const inViewBookName = inViewChapter?.bookName || "";
   const inViewChapterNumber = inViewChapter?.chapterNumber || "";
-  const bannerLabel = inViewChapter
-    ? `${inViewBookName} ${inViewChapterNumber}`
-    : "";
 
   // Fall back to selected* when nothing is loaded yet (initial state).
   const headerBookName = inViewBookName || currentBookName;

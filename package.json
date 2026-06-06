@@ -9,7 +9,8 @@
     "lint": "eslint",
     "download:bibles": "node scripts/download-bibles.mjs",
     "download:meaning": "node scripts/download-meaning-sources.mjs",
-    "build:meaning": "node scripts/build-meaning-bundle.mjs"
+    "build:meaning": "node scripts/build-meaning-bundle.mjs",
+    "verify:meaning": "node scripts/verify-meaning-coverage.mjs"
   },
   "dependencies": {
     "next": "16.2.6",

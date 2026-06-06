@@ -56,7 +56,7 @@ interface Verse {
 
 ### Location Options
 
-**Option A: Header Navigation (Recommended for MVP)**
+**Option A: Header Navigation (Recommended)**
 ```
 ┌─────────────────────────────────────────┐
 │  ← Back  |  Genesis 2  |  [ESV ▼]      │
@@ -127,7 +127,7 @@ interface Annotation {
 }
 ```
 
-## MVP Implementation (Phase 1)
+## Translation Support
 
 ### Included Translations (Public Domain)
 - **KJV** - King James Version (1611, public domain)
@@ -144,7 +144,7 @@ interface Annotation {
 
 ## Translation Storage
 
-### MVP: Static JSON Files
+### Static JSON Files
 ```
 /lib/translations/
   ├── genesis-2-kjv.json
@@ -314,7 +314,7 @@ When switching translations with freehand drawings:
 
 ## Implementation Priority
 
-### MVP (Now)
+### Current
 1. Support 2-3 translations (KJV + 1-2 public domain)
 2. Basic dropdown selector
 3. Text switching without page reload

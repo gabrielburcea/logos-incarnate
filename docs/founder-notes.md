@@ -23,7 +23,7 @@ This would validate the product's core distinctiveness before attempting the ful
 
 ## Purpose of the First Vertical Slice
 
-The purpose of the Genesis 2 prototype is to prove that the app can:
+The purpose of the Genesis 2 vertical slice is to prove that the app can:
 - feel beautiful and reverent as a reading experience
 - become a living annotated manuscript
 - surface deep meaning without information overload

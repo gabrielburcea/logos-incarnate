@@ -54,8 +54,8 @@ This makes it ideal for proving the product direction without requiring the whol
 - better founder and user feedback loop
 
 ### Tradeoffs
-- the prototype will not initially represent the full product scope
-- some stakeholders may mistake the chapter-specific prototype for the final scope unless explained clearly
+- the initial vertical slice will not represent the full product scope
+- some stakeholders may mistake the chapter-specific vertical slice for the final scope unless explained clearly
 
 ## Revisit Conditions
 

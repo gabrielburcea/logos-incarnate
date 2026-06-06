@@ -19,7 +19,7 @@ Includes:
 
 ## Phase 2 — Meaning Explorer Expansion
 
-Goal: extend meaning-first study beyond the first prototype.
+Goal: extend meaning-first study beyond the initial vertical slice.
 
 Includes:
 - more words, people, and places

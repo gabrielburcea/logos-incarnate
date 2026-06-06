@@ -9,11 +9,6 @@ import { parseHTMLToVerses } from "@/lib/services/verse-parser";
 type SurfaceMode = "reading" | "study";
 type ToolMode = "pen" | "marker" | "eraser";
 
-type Position = {
-  x: number;
-  y: number;
-};
-
 type VerseAnnotation = {
   underlinedWordIndexes?: number[];
   underlinedWordColors?: Record<number, string>;
@@ -44,12 +39,6 @@ const MAIN_COLORS = [
 
 function getStorageKey(bibleId: string, bookId: string, chapterId: string, type: 'annotations' | 'svg') {
   return `logos-incarnate:${bibleId}:${bookId}:${chapterId}:${type}`;
-}
-
-function toSafeToolMode(raw: unknown): ToolMode {
-  if (raw === "marker") return "marker";
-  if (raw === "eraser") return "eraser";
-  return "pen";
 }
 
 function toSafeAnnotationState(raw: unknown): AnnotationState {
@@ -309,7 +298,7 @@ export function BibleExperience({ surface }: { surface: SurfaceMode }) {
     });
   }
 
-  function handleWordClick(verseNumber: number, wordIndex: number) {
+  function handleWordClick(verseNumber: number) {
     // Word click currently does nothing - meaning explorer disabled
     // Future: could open context menu or meaning lookup
     selectVerse(verseNumber);
@@ -419,7 +408,7 @@ export function BibleExperience({ surface }: { surface: SurfaceMode }) {
                   if (!isAnnotating) {
                     event.preventDefault();
                     event.stopPropagation();
-                    handleWordClick(verseNumber, index);
+                    handleWordClick(verseNumber);
                   }
                 }}
                 aria-pressed={isAnnotated}

@@ -111,7 +111,7 @@ interface SVGAnnotation {
 ```
 
 ### Storage Location
-- localStorage for MVP (client-side persistence)
+- localStorage (client-side persistence)
 - Future: database with user accounts
 - Export capability: JSON, SVG file, PDF with annotations
 
@@ -162,7 +162,7 @@ SVG Paths → JSON → AI Analysis → Video Storyboard → Animation Frames
 
 ## Future Enhancements
 
-### Phase 1 (Current POC)
+### Phase 1 (Current)
 - Basic pen, marker, eraser
 - Stroke smoothing
 - Color selection

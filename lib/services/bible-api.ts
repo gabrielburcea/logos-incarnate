@@ -236,48 +236,6 @@ class BibleAPIService {
       throw error;
     }
   }
-
-  async getVerses(bibleId: string, chapterId: string): Promise<Verse[]> {
-    try {
-      const response = await fetch(
-        `${BASE_URL}/bibles/${bibleId}/chapters/${chapterId}/verses`,
-        {
-          headers: this.headers,
-        }
-      );
-      
-      if (!response.ok) {
-        throw new Error(`Failed to fetch verses: ${response.statusText}`);
-      }
-      
-      const data = await response.json();
-      return data.data || [];
-    } catch (error) {
-      console.error('Error fetching verses:', error);
-      throw error;
-    }
-  }
-
-  async searchBible(bibleId: string, query: string): Promise<any> {
-    try {
-      const response = await fetch(
-        `${BASE_URL}/bibles/${bibleId}/search?query=${encodeURIComponent(query)}`,
-        {
-          headers: this.headers,
-        }
-      );
-      
-      if (!response.ok) {
-        throw new Error(`Failed to search: ${response.statusText}`);
-      }
-      
-      const data = await response.json();
-      return data;
-    } catch (error) {
-      console.error('Error searching bible:', error);
-      throw error;
-    }
-  }
 }
 
 export const bibleAPI = new BibleAPIService();

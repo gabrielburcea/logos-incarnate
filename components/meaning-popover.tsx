@@ -49,7 +49,6 @@ function formatRef(ref: string): string {
 /** Compute popover position: above the anchor when there's room, else below. */
 function computePosition(anchor: HTMLElement, popoverHeight: number) {
   const rect = anchor.getBoundingClientRect();
-  const viewportH = window.innerHeight;
   const viewportW = window.innerWidth;
   const margin = 12;
 

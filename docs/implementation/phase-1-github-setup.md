@@ -25,7 +25,7 @@ The goal is to prove the product's identity through one narrow but compelling ve
 
 - phase-1
 - genesis-2
-- mvp
+- vertical-slice
 - reader
 - study-mode
 - annotations
@@ -37,7 +37,7 @@ The goal is to prove the product's identity through one narrow but compelling ve
 Minimum set if you want fewer:
 - phase-1
 - genesis-2
-- mvp
+- vertical-slice
 
 ---
 
@@ -82,7 +82,6 @@ Phase 1 is successful if:
 
 Reference docs:
 - `docs/founder-notes.md`
-- `docs/mvp.md`
 - `docs/product-roadmap.md`
 - `docs/implementation/phase-1-genesis-2.md`
 - `docs/architecture/ai-meaning-engine.md`
@@ -92,7 +91,7 @@ Reference docs:
 Suggested labels:
 - phase-1
 - genesis-2
-- mvp
+- vertical-slice
 
 Milestone:
 - Phase 1 — Genesis 2 Vertical Slice
@@ -107,7 +106,7 @@ Build Genesis 2 reader UI for Phase 1 vertical slice
 ### Body
 ## Background
 
-The Genesis 2 reader UI is the foundation of the Phase 1 prototype.
+The Genesis 2 reader UI is the foundation of the Phase 1 vertical slice.
 
 It should provide a calm, elegant reading experience that becomes the entry point for Study Manuscript Mode, Meaning Explorer, and graph preview interactions.
 
@@ -132,7 +131,7 @@ This issue should focus on the chapter reading foundation, not annotation persis
 Suggested labels:
 - phase-1
 - genesis-2
-- mvp
+- vertical-slice
 - reader
 - frontend
 
@@ -175,7 +174,7 @@ It should transform the normal reading surface into a manuscript-style study env
 Suggested labels:
 - phase-1
 - genesis-2
-- mvp
+- vertical-slice
 - study-mode
 - design
 - frontend
@@ -219,7 +218,7 @@ Highlights, underlines, and notes should remain visually attached to the reading
 Suggested labels:
 - phase-1
 - genesis-2
-- mvp
+- vertical-slice
 - annotations
 - frontend
 
@@ -272,7 +271,7 @@ The first version should focus on a limited set of curated targets.
 Suggested labels:
 - phase-1
 - genesis-2
-- mvp
+- vertical-slice
 - meaning-explorer
 - frontend
 
@@ -314,7 +313,7 @@ The first version should remain intentionally small and focused.
 Suggested labels:
 - phase-1
 - genesis-2
-- mvp
+- vertical-slice
 - graph
 - frontend
 
