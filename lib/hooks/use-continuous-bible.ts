@@ -41,15 +41,11 @@ export function useContinuousBible() {
         setLoading(true);
         setError(null);
         const data = await bibleAPI.getBibles();
-        // Preferred display order: local bundles first (instant + offline), then
-        // licensed translations from API.Bible. Falls back gracefully when a
-        // particular id isn't available.
+        // Local bundles only — KJV and WEB ship as static assets in
+        // public/bibles/, so they load instantly and work offline.
         const order = [
           BIBLE_VERSIONS.KJV_LOCAL,
           BIBLE_VERSIONS.WEB_LOCAL,
-          BIBLE_VERSIONS.BSB_LOCAL,
-          BIBLE_VERSIONS.ESV,
-          BIBLE_VERSIONS.NIV,
         ];
         const wanted = new Set<string>(order);
         const selectedBibles = data

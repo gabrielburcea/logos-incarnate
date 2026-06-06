@@ -3,7 +3,7 @@ import { bibleAPI, BibleVersion, Book, Chapter, ChapterContent, BIBLE_VERSIONS }
 
 export function useBible() {
   const [bibles, setBibles] = useState<BibleVersion[]>([]);
-  const [selectedBibleId, setSelectedBibleId] = useState<string>(BIBLE_VERSIONS.KJV);
+  const [selectedBibleId, setSelectedBibleId] = useState<string>(BIBLE_VERSIONS.KJV_LOCAL);
   const [books, setBooks] = useState<Book[]>([]);
   const [selectedBookId, setSelectedBookId] = useState<string>('GEN');
   const [chapters, setChapters] = useState<Chapter[]>([]);
@@ -40,11 +40,22 @@ export function useBible() {
       setLoading(true);
       setError(null);
       const data = await bibleAPI.getBibles();
-      // Only show KJV and NIV
-      const selectedBibles = data.filter(bible => 
-        bible.id === BIBLE_VERSIONS.KJV || bible.id === BIBLE_VERSIONS.NIV
-      );
+      // Local bundles only — KJV and WEB ship as static assets in
+      // public/bibles/, so they load instantly and work offline.
+      const order = [BIBLE_VERSIONS.KJV_LOCAL, BIBLE_VERSIONS.WEB_LOCAL];
+      const wanted = new Set<string>(order);
+      const selectedBibles = data
+        .filter((bible) => wanted.has(bible.id))
+        .sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
       setBibles(selectedBibles);
+
+      // Fall back to whichever local bundle did load if KJV isn't on disk.
+      if (
+        selectedBibles.length > 0 &&
+        !selectedBibles.find((b) => b.id === BIBLE_VERSIONS.KJV_LOCAL)
+      ) {
+        setSelectedBibleId(selectedBibles[0].id);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load bibles');
     } finally {
