@@ -105,6 +105,88 @@ function cleanDef(def) {
   return String(def).replace(/^\{/, '').replace(/\}$/, '').trim();
 }
 
+/** Pull clean lowercase English word tokens out of a STEPBible English cell. */
+function collectEnglishTokens(raw, set) {
+  if (!raw) return;
+  const cleaned = String(raw)
+    .replace(/<[^>]*>/g, ' ')      // <implied>
+    .replace(/\[[^\]]*\]/g, ' ')   // [supplied]
+    .replace(/\{[^}]*\}/g, ' ')    // {braces}
+    .replace(/[\u00bb@|\/]/g, ' ') // » @ | /  (cross-ref separators)
+    .replace(/\b\d+(?:[.:]\d+)?\b/g, ' ') // stray refs
+    .toLowerCase();
+  for (const w of cleaned.split(/[\s,;.()!?"’']+/)) {
+    if (/^[a-z'-]{2,}$/.test(w) && !BUILD_STOPWORDS.has(w)) set.add(w);
+  }
+}
+
+/**
+ * Function words we never want as alignment keys. Mirrors the runtime
+ * SKIP_WORDS so the reader never gets a meaning card on "the / of / and".
+ * Filtering here also shrinks the shipped alignment file substantially.
+ */
+const BUILD_STOPWORDS = new Set([
+  'a','an','the','am','is','are','was','were','be','been','being',
+  'art','wast','wert','have','has','had','do','does','did','doing','done',
+  'hast','hath','doth','didst','shall','will','would','should','could','may',
+  'might','can','must','ought','shalt','wilt','i','you','he','she','it','we',
+  'they','me','him','her','us','them','my','your','his','its','our','their',
+  'mine','yours','hers','ours','theirs','myself','yourself','himself',
+  'herself','itself','ourselves','yourselves','themselves','this','that',
+  'these','those','who','whom','whose','which','what','thou','thee','thy',
+  'thine','ye','thyself','of','in','on','at','by','to','from','for','with',
+  'into','onto','upon','unto','out','off','through','throughout','over',
+  'under','above','below','before','after','between','among','amongst',
+  'against','without','within','about','around','across','behind','beside',
+  'beyond','during','and','or','but','so','yet','nor','if','as','because',
+  'when','while','whilst','then','than','though','although','since','until',
+  'till','unless','where','wherein','whereby','whence','whither','no','not',
+  'none','nay','never','all','any','some','many','much','more','most','few',
+  'less','least','every','each','both','either','neither','one','two','three',
+  'there','here','also','only','just','even','very','ever','again','always',
+  'now','often','sometimes','yea','behold','lo','oft','up','down',
+]);
+
+/** For OT the gloss sits inside braces: "{H5828=עֵ֫זֶר=helper}" → "helper". */
+function extractGloss(raw, isNT) {
+  if (!raw) return '';
+  let s = String(raw).trim();
+  if (!isNT && s.includes('{')) {
+    s = s.replace(/[{}]/g, '');
+    const parts = s.split('=');
+    return parts[parts.length - 1];
+  }
+  return s;
+}
+
+/** Extract the original-language surface form + its transliteration. */
+function parseSurface(fields, isNT) {
+  if (isNT) {
+    // [1] e.g. "τετέλεσται. (tetelestai)"
+    const raw = (fields[1] || '').trim();
+    const mt = raw.match(/^(.*?)\s*\(([^)]*)\)\s*$/);
+    let form = mt ? mt[1] : raw;
+    const translit = mt ? mt[2].trim() : '';
+    form = form.replace(/[.,;:·]+$/g, '').trim();
+    return { form, translit };
+  }
+  // OT: [1] Hebrew surface, [2] transliteration with syllable dots.
+  const form = (fields[1] || '').replace(/[\u05BE\/|]+$/g, '').trim();
+  const translit = (fields[2] || '').replace(/\./g, '').trim();
+  return { form, translit };
+}
+
+/** Normalize a morph code: NT "G5055=V-RPI-3S" → "V-RPI-3S"; OT "HNcmsa". */
+function parseMorph(raw, isNT) {
+  if (!raw) return '';
+  let s = String(raw).trim();
+  if (isNT) {
+    const eq = s.indexOf('=');
+    if (eq >= 0) s = s.slice(eq + 1);
+  }
+  return s.split(/\s/)[0];
+}
+
 /** Read a .js Strong's dictionary and return the trimmed JSON-like object. */
 async function trimLexicon(jsPath, varName) {
   const src = await fs.readFile(jsPath, 'utf8');
@@ -126,6 +208,9 @@ async function trimLexicon(jsPath, varName) {
       // Hebrew lexicon uses `xlit`, Greek lexicon uses `translit` — accept both.
       translit: entry.xlit || entry.translit || '',
       definition: def,
+      // The comma-list of KJV renderings ("finish, pay, accomplish, …").
+      // Public-domain; powers the popover's "range of meaning" line.
+      kjvDef: cleanDef(entry.kjv_def) || '',
     };
   }
   return trimmed;
@@ -202,10 +287,12 @@ async function parseStepBible() {
     (f) => f.endsWith('.txt') && (f.startsWith('TAHOT') || f.startsWith('TAGNT'))
   );
 
-  const verseLemmas = {}; // { BOOK: { 'ch:vs': [strongs...] } }
-  const alignment = {}; // { 'BOOK.ch.vs': { englishWord: Set<strongs> } }
+  const verseLemmas = {}; // { BOOK: { 'ch.vs': [strongs...] } } (NT only)
+  const alignment = {};   // { 'BOOK.ch.vs': { english: Set<strongs> } }
+  const formOcc = {};     // { strongs: { morph: { f, t, r:Set<fullRef> } } }
 
-  // Lines that begin a verse start with the reference, e.g. "Gen.2.18#11=L<TAB>...".
+  // Lines that begin a verse-word start with the reference, e.g.
+  // "Gen.2.18#11=L<TAB>...".
   const refRe = /^([1-3]?[A-Z][a-z]{1,3})\.(\d+)\.(\d+)/;
 
   for (const f of files) {
@@ -216,75 +303,92 @@ async function parseStepBible() {
     let lineCount = 0;
     let dataLineCount = 0;
 
-    // Field layout differs between the two file types (verified by inspection):
-    //   TAHOT (OT)  fields[0]=ref  fields[3]=English  fields[8]=Strong's root
-    //   TAGNT (NT)  fields[0]=ref  fields[9]=English  fields[11]=Strong's root
-    //                              (fields[2] is contextual English with [the]/etc.
-    //                               fields[9] is the bare lexical gloss — better
-    //                               for English-word alignment.)
-    const ENGLISH_IDX = isNT ? 9 : 3;
-    const STRONGS_IDX = isNT ? 11 : 8;
+    // Field layout (verified by dumping real lines — see _inspect-fields.mjs):
+    //
+    //   TAGNT (NT)                        TAHOT (OT)
+    //   [1] τετέλεσται. (tetelestai)     [1] עֵזֶר           surface
+    //   [2] It has been finished.  ←Eng   [2] 'E.zer          translit
+    //   [3] G5055=V-RPI-3S    ←Strong+morph [3] a helper   ←Eng
+    //   [9] to finish          ←gloss     [5] HNcmsa     ←morph
+    //                                     [8] H5828      ←Strong
+    //                                     [11] {H5828=עֵזֶר=helper} ←gloss
+    //
+    // The earlier bug: NT used [9] ("to finish", a dictionary gloss) as the
+    // English source, so inflected page words like "finished" never matched.
+    // We now use the CONTEXTUAL field ([2] NT / [3] OT) and ALSO merge the
+    // gloss, for the best cross-translation coverage.
+    const CTX_IDX = isNT ? 2 : 3;
+    const GLOSS_IDX = isNT ? 9 : 11;
+    const minLen = isNT ? 3 : 8;
 
     for (const line of text.split('\n')) {
       lineCount++;
       const m = line.match(refRe);
       if (!m) continue;
-      const stepBook = m[1];
-      const usfm = STEP_TO_USFM[stepBook];
+      const usfm = STEP_TO_USFM[m[1]];
       if (!usfm) continue;
-      const ch = m[2];
-      const vs = m[3];
-      const ref = `${ch}.${vs}`;
-      const fullRef = `${usfm}.${ch}.${vs}`;
+      const ref = `${m[2]}.${m[3]}`;
+      const fullRef = `${usfm}.${ref}`;
 
       const fields = line.split('\t');
-      if (fields.length <= STRONGS_IDX) continue;
-      dataLineCount++;
+      if (fields.length <= minLen) continue;
 
-      const english = (fields[ENGLISH_IDX] || '').trim();
-      const rootField = (fields[STRONGS_IDX] || '').trim();
-
-      const codes = extractStrongs(rootField, defaultPrefix);
+      // Strong's: NT from [3] ("G5055=..."), OT from the clean [8] column.
+      const strongsRaw = isNT
+        ? (fields[3] || '').split('=')[0]
+        : (fields[8] || '');
+      const codes = extractStrongs(strongsRaw, defaultPrefix);
       if (codes.length === 0) continue;
+      dataLineCount++;
+      const primary = codes[0];
 
-      // Per-verse list (used for occurrence index + verse-level ⓘ fallback).
-      // Only fill if morphhb didn't already produce this book (NT only).
+      // Per-verse lemma list (NT only; OT comes from morphhb).
       if (isNT) {
         if (!verseLemmas[usfm]) verseLemmas[usfm] = {};
         if (!verseLemmas[usfm][ref]) verseLemmas[usfm][ref] = [];
         verseLemmas[usfm][ref].push(...codes);
       }
 
-      // KJV alignment: extract real English tokens from the gloss field.
-      // Strip annotation noise: <implied>, [supplied], slashes, punctuation,
-      // and » / @ separators that STEPBible uses for cross-references.
-      if (english) {
-        const tokens = english
-          .replace(/<[^>]*>/g, ' ')
-          .replace(/\[[^\]]*\]/g, ' ')
-          .replace(/[\u00bb@\/|]/g, ' ')
-          .replace(/\b\d+(?:[.:]\d+)?\b/g, ' ') // strip stray refs
-          .toLowerCase()
-          .split(/[\s,;.()!?"]+/)
-          .filter((w) => /^[a-z'-]{2,}$/.test(w));
-        for (const ew of tokens) {
-          if (!alignment[fullRef]) alignment[fullRef] = {};
-          if (!alignment[fullRef][ew]) alignment[fullRef][ew] = new Set();
-          for (const c of codes) alignment[fullRef][ew].add(c);
+      // English alignment = contextual ∪ gloss.
+      const tokens = new Set();
+      collectEnglishTokens(fields[CTX_IDX], tokens);
+      collectEnglishTokens(extractGloss(fields[GLOSS_IDX], isNT), tokens);
+      for (const ew of tokens) {
+        if (!alignment[fullRef]) alignment[fullRef] = {};
+        if (!alignment[fullRef][ew]) alignment[fullRef][ew] = new Set();
+        for (const c of codes) alignment[fullRef][ew].add(c);
+      }
+
+      // Form data (surface + translit + morph), folded straight into the
+      // form-occurrence index so we ship ONE file, not a 36 MB per-verse dump.
+      // The popover resolves a clicked word's morph by finding which morph
+      // bucket for this Strong's contains the current verse.
+      const { form, translit } = parseSurface(fields, isNT);
+      const morph = parseMorph(isNT ? (fields[3] || '') : (fields[5] || ''), isNT);
+      if (morph) {
+        if (!formOcc[primary]) formOcc[primary] = {};
+        if (!formOcc[primary][morph]) {
+          formOcc[primary][morph] = { f: form, t: translit, r: new Set() };
         }
+        formOcc[primary][morph].r.add(fullRef);
       }
     }
     process.stdout.write(`     ${dataLineCount.toLocaleString()} word entries / ${lineCount.toLocaleString()} lines\n`);
   }
 
-  // Sets → arrays
+  // Sets → arrays.
   for (const ref of Object.keys(alignment)) {
     for (const w of Object.keys(alignment[ref])) {
       alignment[ref][w] = [...alignment[ref][w]];
     }
   }
+  for (const s of Object.keys(formOcc)) {
+    for (const mo of Object.keys(formOcc[s])) {
+      formOcc[s][mo].r = [...formOcc[s][mo].r];
+    }
+  }
 
-  return { verseLemmas, alignment };
+  return { verseLemmas, alignment, formOcc };
 }
 
 // ────────── Step 5: write per-book verse files ──────────
@@ -313,7 +417,7 @@ async function buildOccurrences(allVerses) {
   const occ = {}; // { 'H5828': ['GEN.2.18', 'GEN.2.20', ...], ... }
   for (const [book, verses] of Object.entries(allVerses)) {
     for (const [ref, codes] of Object.entries(verses)) {
-      const [ch, vs] = ref.split(':');
+      const [ch, vs] = ref.split('.');
       const fullRef = `${book}.${ch}.${vs}`;
       const seen = new Set();
       for (const c of codes) {
@@ -342,7 +446,7 @@ async function buildOccurrences(allVerses) {
   const { hebrew, greek } = await buildLexicons();
 
   const morphhbVerses = await parseMorphhb();
-  const { verseLemmas: stepVerses, alignment } = await parseStepBible();
+  const { verseLemmas: stepVerses, alignment, formOcc } = await parseStepBible();
 
   const allVerses = await writeVerses(stepVerses, morphhbVerses);
 
@@ -353,7 +457,24 @@ async function buildOccurrences(allVerses) {
   );
   console.log(`  ✓ ${Object.keys(alignment).length} verses with English-word maps`);
 
-  await buildOccurrences(allVerses);
+  console.log('• Writing form-occurrence index');
+  await fs.writeFile(
+    path.join(OUT, 'form-occurrences.json'),
+    JSON.stringify(formOcc)
+  );
+  console.log(`  ✓ ${Object.keys(formOcc).length} Strong's numbers with form breakdown`);
+
+  const occIndex = await buildOccurrences(allVerses);
+
+  // Patch lemma occurrence counts into the lexicons so the popover can show
+  // "appears in N places" without ever loading the multi-MB occurrence index.
+  for (const [code, refs] of Object.entries(occIndex)) {
+    if (hebrew[code]) hebrew[code].count = refs.length;
+    else if (greek[code]) greek[code].count = refs.length;
+  }
+  await fs.writeFile(path.join(OUT, 'hebrew-lexicon.json'), JSON.stringify(hebrew));
+  await fs.writeFile(path.join(OUT, 'greek-lexicon.json'), JSON.stringify(greek));
+  console.log('  ✓ lemma counts patched into lexicons');
 
   // ─── summary ───
   console.log('\n=== Output sizes ===');
@@ -374,6 +495,7 @@ async function buildOccurrences(allVerses) {
     'verses/ (per-book)': await dirSize('verses'),
     'alignments/KJV.json': await sizeOf('alignments/KJV.json'),
     'occurrences.json': await sizeOf('occurrences.json'),
+    'form-occurrences.json': await sizeOf('form-occurrences.json'),
   };
   let total = 0;
   for (const [k, v] of Object.entries(sizes)) {
@@ -396,5 +518,25 @@ async function buildOccurrences(allVerses) {
   if (occ.H5828) {
     console.log(`  Occurrences: ${occ.H5828.length} verses`);
     console.log(`               ${occ.H5828.slice(0, 8).join(' · ')}${occ.H5828.length > 8 ? ' …' : ''}`);
+  }
+
+  // Sanity check: prove the τετέλεσται lookup works end-to-end
+  console.log('\n=== Sanity check: τετέλεσται (G5055) ===');
+  const align = JSON.parse(
+    await fs.readFile(path.join(OUT, 'alignments/KJV.json'), 'utf8')
+  );
+  console.log(`  JHN.19.30 "finished" → ${JSON.stringify(align['JHN.19.30']?.finished)}`);
+  const fo = JSON.parse(
+    await fs.readFile(path.join(OUT, 'form-occurrences.json'), 'utf8')
+  );
+  const rpi = fo['G5055'] && fo['G5055']['V-RPI-3S'];
+  if (rpi) {
+    console.log(`  Form: ${rpi.f} (${rpi.t})`);
+    console.log(`  Perfect-passive occurs in: ${rpi.r.join(', ')}`);
+  }
+  if (greek.G5055) {
+    console.log(`  Lemma: ${greek.G5055.lemma} · ${greek.G5055.translit}`);
+    console.log(`  Def:   ${greek.G5055.definition}`);
+    console.log(`  KJV:   ${greek.G5055.kjvDef}`);
   }
 })();

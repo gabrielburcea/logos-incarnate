@@ -3,18 +3,21 @@
 import { useEffect, useState } from "react";
 import {
   getLexiconEntry,
-  getOccurrences,
+  resolveForm,
   type LexiconEntry,
+  type ResolvedForm,
 } from "@/lib/services/meaning-api";
 
 interface MeaningPopoverProps {
-  /** The Strong's number for the word being explored, e.g. "H5828". */
+  /** The Strong's number for the word being explored, e.g. "G5055". */
   strongs: string;
-  /** The English word that was clicked, shown as the card heading. */
+  /** The English word that was touched, e.g. "finished". */
   englishWord: string;
+  /** The verse the word sits in, e.g. "JHN.19.30". */
+  verseRef: string;
   /** The DOM element the popover is anchored to (used for positioning). */
   anchorEl: HTMLElement | null;
-  /** Called when the user dismisses the popover (× button or outside click). */
+  /** Called when the user dismisses the popover. */
   onClose: () => void;
 }
 
@@ -69,23 +72,29 @@ function computePosition(anchor: HTMLElement, popoverHeight: number) {
 export function MeaningPopover({
   strongs,
   englishWord,
+  verseRef,
   anchorEl,
   onClose,
 }: MeaningPopoverProps) {
   const [entry, setEntry] = useState<LexiconEntry | null>(null);
-  const [occurrences, setOccurrences] = useState<string[] | null>(null);
+  const [form, setForm] = useState<ResolvedForm | null>(null);
   const [position, setPosition] = useState<{ top: number; left: number; placeBelow: boolean } | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Load lexicon entry + occurrences in parallel.
+  const isHebrew = strongs[0]?.toUpperCase() === "H";
+  const scriptDir = isHebrew ? "rtl" : "ltr";
+
+  // Load lexicon entry + the exact form used in THIS verse, in parallel.
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    Promise.all([getLexiconEntry(strongs), getOccurrences(strongs)])
-      .then(([e, occ]) => {
+    setEntry(null);
+    setForm(null);
+    Promise.all([getLexiconEntry(strongs), resolveForm(strongs, verseRef)])
+      .then(([e, f]) => {
         if (cancelled) return;
         setEntry(e);
-        setOccurrences(occ);
+        setForm(f);
         setLoading(false);
       })
       .catch(() => {
@@ -95,7 +104,7 @@ export function MeaningPopover({
     return () => {
       cancelled = true;
     };
-  }, [strongs]);
+  }, [strongs, verseRef]);
 
   // Position the popover after the content is laid out.
   useEffect(() => {
@@ -107,7 +116,7 @@ export function MeaningPopover({
       setPosition(computePosition(anchorEl, height));
     }, 0);
     return () => window.clearTimeout(timer);
-  }, [anchorEl, entry, loading]);
+  }, [anchorEl, entry, form, loading]);
 
   // Escape closes the popover. Outside-click dismissal is owned by the
   // parent `ContinuousReadingExperience`, which also handles hover-close
@@ -121,6 +130,9 @@ export function MeaningPopover({
   }, [onClose]);
 
   if (!anchorEl) return null;
+
+  // Other verses sharing this exact form (exclude the one we're reading).
+  const otherForm = form ? form.refs.filter((r) => r !== verseRef) : [];
 
   return (
     <div
@@ -144,45 +156,90 @@ export function MeaningPopover({
         ×
       </button>
 
-      {loading && (
-        <div className="meaning-popover__loading">Loading…</div>
-      )}
+      {loading && <div className="meaning-popover__loading">…</div>}
 
       {!loading && !entry && (
         <div className="meaning-popover__loading">
-          No meaning data found for &ldquo;{englishWord}&rdquo;.
+          No meaning data for &ldquo;{englishWord}&rdquo;.
         </div>
       )}
 
       {!loading && entry && (
         <>
           <header className="meaning-popover__header">
-            <div className="meaning-popover__lemma" lang="he">
+            <div
+              className="meaning-popover__lemma"
+              dir={scriptDir}
+              style={{ direction: scriptDir }}
+            >
               {entry.lemma}
             </div>
-            <div className="meaning-popover__translit">{entry.translit}</div>
+            <div className="meaning-popover__translit">
+              {entry.translit}
+              <span className="meaning-popover__strongs"> · {strongs}</span>
+            </div>
           </header>
 
           <p className="meaning-popover__definition">{entry.definition}</p>
 
-          {occurrences && occurrences.length > 0 && (
-            <div className="meaning-popover__occurrences">
-              <div className="meaning-popover__occurrences-label">
-                Also appears in {occurrences.length}{" "}
-                {occurrences.length === 1 ? "verse" : "verses"}
-              </div>
-              <ul className="meaning-popover__occurrences-list">
-                {occurrences.slice(0, 12).map((ref) => (
-                  <li key={ref}>{formatRef(ref)}</li>
-                ))}
-                {occurrences.length > 12 && (
-                  <li className="meaning-popover__more">
-                    +{occurrences.length - 12} more
-                  </li>
+          {entry.kjvDef && (
+            <p className="meaning-popover__range">
+              <span className="meaning-popover__range-label">Rendered as </span>
+              {entry.kjvDef}
+            </p>
+          )}
+
+          {/* The form-specific section — the heart of the τετέλεσται idea. */}
+          {form && (
+            <div className="meaning-popover__form">
+              <div className="meaning-popover__form-head">As written here</div>
+              <div
+                className="meaning-popover__form-word"
+                dir={scriptDir}
+                style={{ direction: scriptDir }}
+              >
+                {form.form}
+                {form.translit && (
+                  <span className="meaning-popover__form-translit">
+                    {" "}· {form.translit}
+                  </span>
                 )}
-              </ul>
+              </div>
+              {form.note && (
+                <div className="meaning-popover__form-note">{form.note}</div>
+              )}
+
+              {otherForm.length > 0 ? (
+                <div className="meaning-popover__form-occ">
+                  <span className="meaning-popover__form-occ-label">
+                    This exact form also appears in{" "}
+                  </span>
+                  {otherForm.map((ref, i) => (
+                    <span key={ref}>
+                      {i > 0 ? " · " : ""}
+                      {formatRef(ref)}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <div className="meaning-popover__form-occ meaning-popover__form-occ--solo">
+                  This exact form appears only here.
+                </div>
+              )}
             </div>
           )}
+
+          {typeof entry.count === "number" && entry.count > 1 && (
+            <p className="meaning-popover__lemma-count">
+              The word{" "}
+              <span dir={scriptDir} style={{ direction: scriptDir }}>
+                {entry.lemma}
+              </span>{" "}
+              appears in {entry.count} places across Scripture.
+            </p>
+          )}
+
+          <footer className="meaning-popover__source">Source: Strong&rsquo;s</footer>
         </>
       )}
     </div>

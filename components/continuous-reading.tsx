@@ -233,6 +233,7 @@ export function ContinuousReadingExperience() {
   const [popover, setPopover] = useState<{
     strongs: string;
     word: string;
+    verse: string;
     anchor: HTMLElement;
   } | null>(null);
 
@@ -297,7 +298,10 @@ export function ContinuousReadingExperience() {
           openTimer = null;
           const strongs = anchor.dataset.strongs;
           const word = anchor.dataset.word;
-          if (strongs && word) setPopover({ strongs, word, anchor });
+          const verse = anchor.dataset.verse;
+          if (strongs && word && verse) {
+            setPopover({ strongs, word, verse, anchor });
+          }
         }, HOVER_OPEN_MS);
         return;
       }
@@ -351,10 +355,13 @@ export function ContinuousReadingExperience() {
         cancelClose();
         const strongs = anchor.dataset.strongs;
         const word = anchor.dataset.word;
-        if (!strongs || !word) return;
+        const verse = anchor.dataset.verse;
+        if (!strongs || !word || !verse) return;
         // Toggle behaviour: tap the same word twice → close.
         setPopover((cur) =>
-          cur && cur.anchor === anchor ? null : { strongs, word, anchor },
+          cur && cur.anchor === anchor
+            ? null
+            : { strongs, word, verse, anchor },
         );
         return;
       }
@@ -610,6 +617,7 @@ export function ContinuousReadingExperience() {
         <MeaningPopover
           strongs={popover.strongs}
           englishWord={popover.word}
+          verseRef={popover.verse}
           anchorEl={popover.anchor}
           onClose={() => setPopover(null)}
         />

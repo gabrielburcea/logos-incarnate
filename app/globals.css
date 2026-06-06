@@ -2699,10 +2699,9 @@ button {
 }
 
 .meaning-popover__lemma {
-  font-family: 'SBL Hebrew', 'Times New Roman', serif;
-  font-size: 1.6rem;
+  font-family: 'SBL Hebrew', 'SBL Greek', 'New Athena Unicode', 'Cardo', 'Times New Roman', serif;
+  font-size: 1.7rem;
   line-height: 1.1;
-  direction: rtl;
   unicode-bidi: isolate;
 }
 
@@ -2716,6 +2715,86 @@ button {
   margin: 0 0 0.85rem 0;
   font-size: 0.96rem;
   line-height: 1.45;
+}
+
+.meaning-popover__strongs {
+  font-style: normal;
+  color: color-mix(in oklab, var(--read-ink) 45%, transparent);
+}
+
+/* Range of meaning — the KJV rendering list, sourced from Strong's. */
+.meaning-popover__range {
+  margin: -0.4rem 0 0.85rem 0;
+  font-size: 0.82rem;
+  line-height: 1.4;
+  color: color-mix(in oklab, var(--read-ink) 62%, transparent);
+}
+.meaning-popover__range-label {
+  font-style: italic;
+  opacity: 0.8;
+}
+
+/* "As written here" — the inflected form + its tense/aspect note. */
+.meaning-popover__form {
+  border-top: 1px solid color-mix(in oklab, var(--read-ink) 10%, transparent);
+  padding-top: 0.7rem;
+}
+.meaning-popover__form-head {
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: color-mix(in oklab, var(--read-ink) 50%, transparent);
+  margin-bottom: 0.3rem;
+}
+.meaning-popover__form-word {
+  font-family: 'SBL Hebrew', 'SBL Greek', 'New Athena Unicode', 'Cardo', 'Times New Roman', serif;
+  font-size: 1.35rem;
+  line-height: 1.2;
+  unicode-bidi: isolate;
+}
+.meaning-popover__form-translit {
+  font-family: 'Crimson Text', Georgia, serif;
+  font-style: italic;
+  font-size: 0.9rem;
+  color: color-mix(in oklab, var(--read-ink) 65%, transparent);
+}
+.meaning-popover__form-note {
+  margin-top: 0.35rem;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  font-style: italic;
+  color: color-mix(in oklab, var(--read-ink) 82%, transparent);
+}
+.meaning-popover__form-occ {
+  margin-top: 0.55rem;
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+.meaning-popover__form-occ-label {
+  color: color-mix(in oklab, var(--read-ink) 60%, transparent);
+}
+.meaning-popover__form-occ--solo {
+  color: color-mix(in oklab, var(--read-ink) 60%, transparent);
+  font-style: italic;
+}
+
+/* Secondary line: how often the lemma appears across all of Scripture. */
+.meaning-popover__lemma-count {
+  margin: 0.7rem 0 0 0;
+  font-size: 0.84rem;
+  line-height: 1.45;
+  color: color-mix(in oklab, var(--read-ink) 60%, transparent);
+}
+
+.meaning-popover__source {
+  margin-top: 0.8rem;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.66rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: color-mix(in oklab, var(--read-ink) 38%, transparent);
 }
 
 .meaning-popover__occurrences {
